@@ -14,17 +14,33 @@ using namespace std;
 const int WIDTH = 10;
 const int HEIGHT = 20;
 
+// --- Colors ---
+// ANSI escape codes for colors
+// Funny number make color, I guess...
+const string RESET = "\033[0m";
+const string COLORS[7] = {
+    "\033[36m",
+    "\033[33m",
+    "\033[35m",
+    "\033[32m",
+    "\033[34m",
+    "\033[31m",
+    "\033[91m"
+};
+
+// Utility to convert int to string (std::to_string broke on me too many times)
 string intToString(int n) {
     stringstream ss;
     ss << n;
     return ss.str();
 }
 
-// Strip ANSI codes for accurate length
+// Strip ANSI codes for accurate length (alighnments were cursed without this)
 int visibleLength(const string& s) {
     return regex_replace(s, regex("\033\\[[0-9;]*m"), "").size();
 }
 
+// Console width detection (Windows console API sorcery)
 int getConsoleWidth() {
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     int width = 80;
@@ -34,11 +50,13 @@ int getConsoleWidth() {
     return width;
 }
 
+// Reset cursor back to top left (avoids flickering madness... mostly)
 void resetCursor() {
     COORD pos = { 0, 0 };
     SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos);
 }
 
+// Print text centered on X, with Y offset
 void printCentered(const string& text, int y) {
     int consoleWidth = getConsoleWidth();
     int x = max(0, (consoleWidth - (int)visibleLength(text)) / 2);
@@ -48,6 +66,7 @@ void printCentered(const string& text, int y) {
 }
 
 // --- Start menu ---
+// This was way more annoying to make than it had any right to be
 void showStartMenu() {
     system("cls");
     resetCursor();
@@ -82,6 +101,7 @@ void showStartMenu() {
 }
 
 // --- Game exited menu ---
+// Basically the ragequit screen
 void showGameExitedMenu(int score, int lines, int level) {
     system("cls");
     resetCursor();
@@ -122,6 +142,7 @@ void showGameExitedMenu(int score, int lines, int level) {
 }
 
 // --- Game over menu ---
+// I stared at this for 3 hours straight fixing spacing bugs. Never again.
 bool showGameOverMenu(int score, int lines, int level) {
     system("cls");
     resetCursor();
@@ -167,7 +188,11 @@ bool showGameOverMenu(int score, int lines, int level) {
     }
 }
 
+
 // --- Board & logic ---
+// Handling the board state and line clearing.
+// This class ate two days of my life. I hate line clearing logic.
+// It works now though, so whatever.
 class Board {
 public:
     vector<vector<int>> grid;
@@ -226,19 +251,11 @@ public:
     }
 };
 
-// --- Colors ---
-const string RESET = "\033[0m";
-const string COLORS[7] = {
-    "\033[36m", 
-    "\033[33m", 
-    "\033[35m",
-    "\033[32m", 
-    "\033[34m", 
-    "\033[31m", 
-    "\033[91m"
-};
-
 // --- Tetrominoes ---
+// 7 standard Tetris pieces in 4x4 matrices
+// 0 = empty, 1 = filled
+// Indexed 0-6 for easy random selection
+// Took me way too long to get these right, I hate binary literals...
 vector<vector<vector<int>>> TETROMINOES = {
     {
         {0,0,0,0},
@@ -284,6 +301,9 @@ vector<vector<vector<int>>> TETROMINOES = {
     }
 };
 
+// --- Rotation ---
+// Rotate a piece 90 degrees clockwise
+// This was incredibly annoying to get it to work properly
 vector<vector<int>> rotateCW(const vector<vector<int>>& shape) {
     int n = (int)shape.size();
     vector<vector<int>> r(n, vector<int>(n, 0));
@@ -295,17 +315,29 @@ vector<vector<int>> rotateCW(const vector<vector<int>>& shape) {
     return r;
 }
 
+// --- Piece spawning & ghost piece calculation ---
+// Piece struct to hold shape, position, and ID
+// Excessive for this simple game, but whatever, was fun to make
 struct Piece { 
     vector<vector<int>> shape; 
     int x, y, id; 
 };
 
+// Spawn a new piece at the top center
+// ID is used for color and shape selection
+// Starts at y=0, x=centered
+// Why was this so hard to get to work?
 Piece spawnPiece(int id) { 
     return Piece { 
         TETROMINOES[id], WIDTH / 2 - 2, 0, id 
     }; 
 }
 
+// Calculate ghost piece Y position
+// Ghost piece shows where the current piece would land if dropped
+// Does not modify the piece, just calculates the position
+// Do not ask me why this was so hard to get right, I have no idea
+// It just... was.
 int getGhostY(const Board& board, const Piece& current) {
     int y = current.y;
     while (board.isValidPosition(current.shape, current.x, y + 1)) {
@@ -314,6 +346,10 @@ int getGhostY(const Board& board, const Piece& current) {
     return y;
 }
 
+// Calculate drop distance for hard drop
+// Returns how many rows the piece can drop
+// Used for hard drop functionality
+// Some was easy after I got ghost piece working
 int dropDistance(const Board& board, const Piece& piece) {
     int dist = 0;
     while (board.isValidPosition(piece.shape, piece.x, piece.y + dist + 1)) {
@@ -323,6 +359,17 @@ int dropDistance(const Board& board, const Piece& piece) {
 }
 
 // --- Draw board centered ---
+// Draws the board with current piece and ghost piece
+// Centers the board in the console
+// Uses ANSI colors for pieces
+// Ghost piece is drawn in dim color
+// Current piece is drawn normally
+// Placed pieces are drawn in their respective colors
+// Empty spaces are blank
+// This function... this funtion is the reason I had to implement console width detection...
+// It was a nightmare to get the alignment right, but it works now.
+// Also avoids flickering by resetting cursor position instead of clearing screen
+// I lost so much sleep over this... I wish I was kidding.
 void printBoard(const Board& board, const Piece& current, int score, int lines, int level) {
     int consoleWidth = getConsoleWidth();
     int boardWidth = WIDTH * 2 + 2;
@@ -361,6 +408,10 @@ void printBoard(const Board& board, const Piece& current, int score, int lines, 
 }
 
 // --- Draw next piece centered relative to board ---
+// Draws the next piece in a small box to the right of the board
+// Centers the box relative to the board
+// Uses ANSI colors for pieces
+// This was way easier than the main board, somehow...
 void printNextPiece(const Piece& next) {
     int consoleWidth = getConsoleWidth();
     int boxWidth = 8; // 4 blocks * 2
@@ -391,7 +442,63 @@ void printNextPiece(const Piece& next) {
     }
 }
 
+// --- Pause menu ---
+// Honestly, this pause menu was not needed for this... but I wanted to try dimming the board out and it was fun to make :)
+void showPauseMenu(const Board& board, const Piece& current, int score, int lines, int level) {
+    // Redraw board in dim mode
+    int consoleWidth = getConsoleWidth();
+    int boardWidth = WIDTH * 2 + 2;
+    int offsetX = max(0, (consoleWidth - boardWidth) / 2);
+
+    resetCursor();
+    cout << string(offsetX, ' ') << "Score: " << score << "  Lines: " << lines << "  Level: " << level << "\n\n";
+    cout << string(offsetX, ' ') << "+" << string(WIDTH * 2, '-') << "+\n";
+
+    int ghostY = getGhostY(board, current);
+    for (int y = 0; y < HEIGHT; ++y) {
+        cout << string(offsetX, ' ') << "|";
+        for (int x = 0; x < WIDTH; ++x) {
+            bool occupied = board.grid[y][x] != 0;
+            int pieceId = occupied ? board.grid[y][x] - 1 : -1;
+            int sx = x - current.x, sy = y - current.y;
+
+            if (sx >= 0 && sx < (int)current.shape[0].size() &&
+                sy >= 0 && sy < (int)current.shape.size() &&
+                current.shape[sy][sx]) {
+                cout << "\033[90m[]" << RESET; // dim current piece
+            }
+            else if (!occupied && y >= ghostY && y < ghostY + (int)current.shape.size() &&
+                sx >= 0 && sx < (int)current.shape[0].size() && current.shape[y - ghostY][sx]) {
+                cout << "\033[90m[]" << RESET; // dim ghost
+            }
+            else if (occupied) {
+                cout << "\033[90m[]" << RESET; // dim placed block
+            }
+            else {
+                cout << "  ";
+            }
+        }
+        cout << "|\n";
+    }
+    cout << string(offsetX, ' ') << "+" << string(WIDTH * 2, '-') << "+\n";
+
+    // Overlay text
+    string pauseText = "\033[1;36m=== PAUSED ===\033[0m";
+    string resumeText = "\033[1;33mPress P to Resume or Q to Quit\033[0m";
+
+    int y = HEIGHT / 2 - 1;
+    printCentered(pauseText, y);
+    printCentered(resumeText, y + 2);
+}
+
 // --- Main ---
+// Game loop handling input, timing, and state
+// Uses _kbhit and _getch for non-blocking input
+// Uses clock() for timing piece falls
+// Adjusts fall speed based on level
+// Handles piece movement, rotation, hard drop, line clearing, scoring, and game over
+// This thing was such a pain to get right, I am pretty sure I lost 3 days of my life to this stupid part.
+// But it works now, so whatever.
 int main() {
     srand((unsigned)time(nullptr));
     showStartMenu();
@@ -408,83 +515,101 @@ int main() {
         Piece next = spawnPiece(rand() % 7);
         bool dirty = true;
         bool running = true;
+        bool paused = false;
 
         while (running) {
             if (_kbhit()) {
                 char cmd = _getch();
-                if (cmd == 'a' && board.isValidPosition(current.shape, current.x - 1, current.y)) { 
-                    current.x--; 
-                    dirty = true; 
-                }
-                if (cmd == 'd' && board.isValidPosition(current.shape, current.x + 1, current.y)) {
-                    current.x++; 
-                    dirty = true; 
-                }
-                if (cmd == 'w') {
-                    auto r = rotateCW(current.shape);
-                    if (board.isValidPosition(r, current.x, current.y)) { 
-                        current.shape = r; 
-                        dirty = true; 
+                if (!paused) {
+                    if (cmd == 'a' && board.isValidPosition(current.shape, current.x - 1, current.y)) {
+                        current.x--; dirty = true;
                     }
-                }
-                if (cmd == 's') { 
-                    if (board.isValidPosition(current.shape, current.x, current.y + 1)) { 
-                        current.y++; 
-                        dirty = true; 
-                    } 
-                }
-                if (cmd == ' ') {
-                    int dist = dropDistance(board, current); 
-                    current.y += dist; 
-                    dirty = true; 
-                    lastFall = clock() - fallInterval; 
-                }
-                if (cmd == 'q' || cmd == 'Q') { 
-                    running = false; 
-                    showGameExitedMenu(score, totalLines, level); 
-                    restart = true; 
-                    break; 
-                }
-            }
-
-            clock_t now = clock();
-            if ((now - lastFall) * 1000 / CLOCKS_PER_SEC >= fallInterval) {
-                lastFall = now;
-                if (board.isValidPosition(current.shape, current.x, current.y + 1)) {
-                    current.y++;
-                    dirty = true;
+                    if (cmd == 'd' && board.isValidPosition(current.shape, current.x + 1, current.y)) {
+                        current.x++; dirty = true;
+                    }
+                    if (cmd == 'w') {
+                        auto r = rotateCW(current.shape);
+                        if (board.isValidPosition(r, current.x, current.y)) {
+                            current.shape = r; dirty = true;
+                        }
+                    }
+                    if (cmd == 's') {
+                        if (board.isValidPosition(current.shape, current.x, current.y + 1)) {
+                            current.y++; dirty = true;
+                        }
+                    }
+                    if (cmd == ' ') {
+                        int dist = dropDistance(board, current);
+                        current.y += dist;
+                        dirty = true;
+                        lastFall = clock() - fallInterval;
+                    }
+                    if (cmd == 'q' || cmd == 'Q') {
+                        running = false;
+                        showGameExitedMenu(score, totalLines, level);
+                        restart = true;
+                        break;
+                    }
+                    if (cmd == 'p' || cmd == 'P') {
+                        paused = true;
+                        showPauseMenu(board, current, score, totalLines, level);
+                    }
                 }
                 else {
-                    board.placePiece(current.shape, current.x, current.y, current.id);
-                    int cleared = board.clearLines();
-
-                    if (cleared) { 
-                        totalLines += cleared; 
-                        score += board.scoreForLines(cleared, level); 
+                    // While paused
+                    if (cmd == 'p' || cmd == 'P') {
+                        paused = false;
+                        dirty = true; // refresh board on resume
                     }
-
-                    level = totalLines / 10;
-                    fallInterval = max(100, BASE_INTERVAL - level * 100);
-
-                    current = next;
-                    next = spawnPiece(rand() % 7);
-                    dirty = true;
-
-                    if (!board.isValidPosition(current.shape, current.x, current.y)) {
-                        resetCursor();
-                        printBoard(board, current, score, totalLines, level);
-                        printNextPiece(next);
-                        restart = showGameOverMenu(score, totalLines, level);
+                    if (cmd == 'q' || cmd == 'Q') {
+                        running = false;
+                        showGameExitedMenu(score, totalLines, level);
+                        restart = true;
                         break;
                     }
                 }
             }
 
-            if (dirty) { 
-                resetCursor(); 
-                printBoard(board, current, score, totalLines, level); 
-                printNextPiece(next); 
-                dirty = false; 
+            if (!paused) {
+                clock_t now = clock();
+                if ((now - lastFall) * 1000 / CLOCKS_PER_SEC >= fallInterval) {
+                    lastFall = now;
+                    if (board.isValidPosition(current.shape, current.x, current.y + 1)) {
+                        current.y++;
+                        dirty = true;
+                    }
+                    else {
+                        board.placePiece(current.shape, current.x, current.y, current.id);
+                        int cleared = board.clearLines();
+
+                        if (cleared) {
+                            totalLines += cleared;
+                            score += board.scoreForLines(cleared, level);
+                        }
+
+                        level = totalLines / 10;
+                        fallInterval = max(100, BASE_INTERVAL - level * 100);
+
+                        current = next;
+                        next = spawnPiece(rand() % 7);
+                        dirty = true;
+
+                        if (!board.isValidPosition(current.shape, current.x, current.y)) {
+                            resetCursor();
+                            printBoard(board, current, score, totalLines, level);
+                            printNextPiece(next);
+                            restart = showGameOverMenu(score, totalLines, level);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (dirty && !paused) {
+                resetCursor();
+                printBoard(board, current, score, totalLines, level);
+                printNextPiece(next);
+                dirty = false;
             }
             Sleep(16);
         }
@@ -494,3 +619,11 @@ int main() {
     }
     return 0;
 }
+
+// --- End Notes ---
+// I have a love/hate relationship with C++...
+// This was a fun project, but also incredibly frustrating at times.
+// I hope you enjoyed reading through my code as much as I enjoyed writing it (mostly).
+// Thanks for sticking with me to the end!
+// - n0m4official
+// --- End of file ---
