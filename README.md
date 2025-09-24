@@ -71,11 +71,11 @@ CPP-Tetris/
 |    └── Tetris.pdb
 ├── .gitattributes
 ├── .gitignore
+├── README.md
 ├── Tetris.sln
 ├── Tetris.vcxproj
 ├── Tetris.vcxproj.filters
-├── main.cpp
-└── README.md
+└── main.cpp
 ```
 
 ## License
