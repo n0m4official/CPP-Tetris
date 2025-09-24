@@ -60,8 +60,6 @@ A simple Tetris clone built in C++ for the Windows console. Includes basic gamep
 | p              | Pause   |
 | q           | Quit                |
 
-*Controls may vary based on your implementation. Update this section accordingly!*
-
 ## Project Structure
 
 ```
