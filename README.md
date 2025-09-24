@@ -67,7 +67,7 @@ A simple Tetris clone built in C++ for the Windows console. Includes basic gamep
 ```
 CPP-Tetris/
 ├── Release/
-|    ├── Tetris.cpp
+|    ├── Tetris.exe
 |    └── Tetris.pdb
 ├── .gitattributes
 ├── .gitignore
