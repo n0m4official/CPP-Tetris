@@ -52,13 +52,13 @@ A simple Tetris clone built in C++ for the Windows console. Includes basic gamep
 
 | Key            | Action               |
 |----------------|---------------------|
-| Left Arrow     | Move left           |
-| Right Arrow    | Move right          |
-| Down Arrow     | Soft drop           |
-| Up Arrow       | Rotate piece        |
-| Spacebar       | Hard drop (if implemented) |
-| P              | Pause (if implemented)     |
-| Esc            | Quit                |
+| a    | Move left           |
+| d   | Move right          |
+| s     | Soft drop           |
+| w       | Rotate piece        |
+| Spacebar       | Hard drop|
+| p              | Pause   |
+| q           | Quit                |
 
 *Controls may vary based on your implementation. Update this section accordingly!*
 
