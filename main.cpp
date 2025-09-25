@@ -559,6 +559,7 @@ int main() {
                     // While paused
                     if (cmd == 'p' || cmd == 'P') {
                         paused = false;
+                        system("cls");
                         dirty = true; // refresh board on resume
                     }
                     if (cmd == 'q' || cmd == 'Q') {
