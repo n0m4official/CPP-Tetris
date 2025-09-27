@@ -56,9 +56,6 @@ A polished, feature-rich Tetris® clone for the Windows console, written in mode
   <em>Game Over menu</em>
 </p>
 
-
-*(Add your own screenshots in a `/docs` folder!)*
-
 ---
 
 ## 🕹️ Controls
