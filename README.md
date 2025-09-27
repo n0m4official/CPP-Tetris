@@ -32,7 +32,30 @@ A polished, feature-rich Tetris® clone for the Windows console, written in mode
 
 ## 🖥️ Screenshots
 
-TODO: Add screenshots
+<p align="center">
+  <img src="docs/Screenshot 2025-09-27 170408.png" width="520" alt="Tetris Start Menu">
+  <br>
+  <em>Start menu</em>
+</p>
+
+<p align="center">
+  <img src="docs/Screenshot 2025-09-27 170434.png" width="520" alt="Tetris Gameplay">
+  <br>
+  <em>In-game: Board, next, and hold preview</em>
+</p>
+
+<p align="center">
+  <img src="docs/Screenshot 2025-09-27 170851.png" width="520" alt="Tetris Paused">
+  <br>
+  <em>Paused game with dimmed board</em>
+</p>
+
+<p align="center">
+  <img src="docs/Screenshot 2025-09-27 170907.png" width="520" alt="Tetris Game Over">
+  <br>
+  <em>Game Over menu</em>
+</p>
+
 
 *(Add your own screenshots in a `/docs` folder!)*
 
