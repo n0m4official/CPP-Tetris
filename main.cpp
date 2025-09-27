@@ -9,6 +9,8 @@
 #include <sstream>
 #include <regex>
 
+// NOTE: Windows-only implementation due to _kbhit(), _getch(), and Windows console API
+
 using namespace std;
 
 const int WIDTH = 10;
@@ -41,7 +43,7 @@ int visibleLength(const string& s) {
 }
 
 // Console width detection (Windows console API sorcery)
-int getConsoleWidth() {
+int getConsoleWidth() { // Console width calculated once per frame to center board and UI
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     int width = 80;
     if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
@@ -174,12 +176,12 @@ bool showGameOverMenu(int score, int lines, int level) {
         if (_kbhit()) {
             char c = _getch();
             if (c == 'r' || c == 'R') {
-				system("cls");
-				resetCursor();
+                system("cls");
+                resetCursor();
                 return true;
             }
             if (c == 'q' || c == 'Q') {
-				system("cls");
+                system("cls");
                 resetCursor();
                 return false;
             }
@@ -242,11 +244,11 @@ public:
 
     int scoreForLines(int lines, int level) {
         switch (lines) {
-            case 1: return 40 * (level + 1);
-            case 2: return 100 * (level + 1);
-            case 3: return 300 * (level + 1);
-            case 4: return 1200 * (level + 1);
-            default: return 0;
+        case 1: return 40 * (level + 1);
+        case 2: return 100 * (level + 1);
+        case 3: return 300 * (level + 1);
+        case 4: return 1200 * (level + 1);
+        default: return 0;
         }
     }
 };
@@ -287,7 +289,7 @@ vector<vector<vector<int>>> TETROMINOES = {
         {1,1,1,0},
         {0,0,0,0}
     },
-    {        
+    {
         {0,0,0,0},
         {0,1,1,0},
         {1,1,0,0},
@@ -318,19 +320,19 @@ vector<vector<int>> rotateCW(const vector<vector<int>>& shape) {
 // --- Piece spawning & ghost piece calculation ---
 // Piece struct to hold shape, position, and ID
 // Excessive for this simple game, but whatever, was fun to make
-struct Piece { 
-    vector<vector<int>> shape; 
-    int x, y, id; 
+struct Piece {
+    vector<vector<int>> shape;
+    int x, y, id;
 };
 
 // Spawn a new piece at the top center
 // ID is used for color and shape selection
 // Starts at y=0, x=centered
 // Why was this so hard to get to work?
-Piece spawnPiece(int id) { 
-    return Piece { 
-        TETROMINOES[id], WIDTH / 2 - 2, 0, id 
-    }; 
+Piece spawnPiece(int id) {
+    return Piece{
+        TETROMINOES[id], WIDTH / 2 - 2, 0, id
+    };
 }
 
 // Calculate ghost piece Y position
@@ -491,6 +493,39 @@ void showPauseMenu(const Board& board, const Piece& current, int score, int line
     printCentered(resumeText, y + 2);
 }
 
+void printHoldPiece(const Piece& hold) {
+    int consoleWidth = getConsoleWidth();
+    int boxWidth = 8; // 4 blocks * 2
+    int offsetX = max(0, (consoleWidth - WIDTH * 2 - boxWidth) / 2 - boxWidth - 4);
+
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    int verticalOffset = 3;
+
+    for (int y = 0; y < 6; ++y) {
+        COORD pos = { (SHORT)offsetX, (SHORT)(y + verticalOffset) };
+        SetConsoleCursorPosition(hOut, pos);
+
+        if (y == 0 || y == 5) {
+            cout << "+" << string(8, '-') << "+";
+        }
+        else {
+            cout << "|";
+            for (int x = 0; x < 4; ++x) {
+                if (hold.id != -1 && hold.shape[y - 1][x]) {
+                    cout << COLORS[hold.id] << "[]" << RESET;
+                }
+                else {
+                    cout << "  ";
+                }
+            }
+            cout << "|";
+        }
+    }
+}
+
+Piece hold{ {}, 0, 0, -1 }; // initially empty
+bool holdUsed = false;      // can only hold once per piece
+
 // --- Main ---
 // Game loop handling input, timing, and state
 // Uses _kbhit and _getch for non-blocking input
@@ -513,6 +548,9 @@ int main() {
 
         Piece current = spawnPiece(rand() % 7);
         Piece next = spawnPiece(rand() % 7);
+
+        holdUsed = false; // reset hold for next piece
+
         bool dirty = true;
         bool running = true;
         bool paused = false;
@@ -532,6 +570,7 @@ int main() {
                         if (board.isValidPosition(r, current.x, current.y)) {
                             current.shape = r; dirty = true;
                         }
+                        // TODO: Implement wall kicks for rotation near walls
                     }
                     if (cmd == 's') {
                         if (board.isValidPosition(current.shape, current.x, current.y + 1)) {
@@ -553,6 +592,28 @@ int main() {
                     if (cmd == 'p' || cmd == 'P') {
                         paused = true;
                         showPauseMenu(board, current, score, totalLines, level);
+                    }
+
+                    if (cmd == 'c' || cmd == 'C') { // Hold piece
+                        if (!holdUsed) {
+                            if (hold.id == -1) {   // first time holding
+                                hold = current;             // move current piece to hold
+                                current = next;             // next piece becomes current
+                                next = spawnPiece(rand() % 7);
+                            }
+                            else {
+                                // Swap current and hold pieces
+                                Piece temp = current;
+                                current = hold;
+                                hold = temp;
+
+                                // Reset position after swap
+                                current.x = WIDTH / 2 - 2;
+                                current.y = 0;
+                            }
+                            holdUsed = true; // prevent multiple holds before piece locks
+                            dirty = true;    // redraw board
+                        }
                     }
                 }
                 else {
@@ -610,6 +671,7 @@ int main() {
                 resetCursor();
                 printBoard(board, current, score, totalLines, level);
                 printNextPiece(next);
+                printHoldPiece(hold);
                 dirty = false;
             }
             Sleep(16);
