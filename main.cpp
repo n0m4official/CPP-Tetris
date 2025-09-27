@@ -75,8 +75,8 @@ void showStartMenu() {
 
     string border = "====================================";
     printCentered("\033[1;36m" + border + "\033[0m", 5);
-    printCentered("\033[1;36m           TETRIS v1.0            \033[0m", 6);
-    printCentered("\033[1;36m         By n0m4official          \033[0m", 7);
+    printCentered("\033[1;36m           TETRIS v1.1.0            \033[0m", 6);
+    printCentered("\033[1;36m          By n0m4official           \033[0m", 7);
     printCentered("\033[1;36m" + border + "\033[0m", 8);
 
     printCentered("\033[1;33mControls:\033[0m", 10);
