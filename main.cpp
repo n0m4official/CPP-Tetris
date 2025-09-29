@@ -82,12 +82,13 @@ void showStartMenu() {
     printCentered("\033[1;33mControls:\033[0m", 10);
     printCentered("A / D : Move Left / Right", 11);
     printCentered("W     : Rotate", 12);
-    printCentered("S     : Soft Drop", 13);
-    printCentered("Space : Hard Drop", 14);
-    printCentered("Q     : Quit", 15);
+    printCentered("C     : Hold piece", 13);
+    printCentered("S     : Soft Drop", 14);
+    printCentered("Space : Hard Drop", 15);
+    printCentered("Q     : Quit", 16);
 
     string prompt = "\033[1;32mPress ENTER to start...\033[0m";
-    int y = 17;
+    int y = 18;
     while (true) {
         if (_kbhit() && _getch() == '\r') {
             break;
@@ -444,6 +445,9 @@ void printNextPiece(const Piece& next) {
     }
 }
 
+Piece hold{ {}, 0, 0, -1 }; // initially empty
+bool holdUsed = false;      // can only hold once per piece
+
 // --- Pause menu ---
 // Honestly, this pause menu was not needed for this... but I wanted to try dimming the board out and it was fun to make :)
 void showPauseMenu(const Board& board, const Piece& current, int score, int lines, int level) {
@@ -523,9 +527,6 @@ void printHoldPiece(const Piece& hold) {
     }
 }
 
-Piece hold{ {}, 0, 0, -1 }; // initially empty
-bool holdUsed = false;      // can only hold once per piece
-
 // --- Main ---
 // Game loop handling input, timing, and state
 // Uses _kbhit and _getch for non-blocking input
@@ -549,7 +550,9 @@ int main() {
         Piece current = spawnPiece(rand() % 7);
         Piece next = spawnPiece(rand() % 7);
 
-        holdUsed = false; // reset hold for next piece
+        Piece hold;
+        hold.id = -1;
+        bool holdUsed = false;
 
         bool dirty = true;
         bool running = true;
@@ -596,18 +599,18 @@ int main() {
 
                     if (cmd == 'c' || cmd == 'C') { // Hold piece
                         if (!holdUsed) {
-                            if (hold.id == -1) {   // first time holding
+                            if (hold.id == -1) {            // first time holding
                                 hold = current;             // move current piece to hold
                                 current = next;             // next piece becomes current
                                 next = spawnPiece(rand() % 7);
                             }
                             else {
-                                // Swap current and hold pieces
+                                // Manual swap of pieces
                                 Piece temp = current;
                                 current = hold;
                                 hold = temp;
 
-                                // Reset position after swap
+                                // Reset current piece position after swap
                                 current.x = WIDTH / 2 - 2;
                                 current.y = 0;
                             }
@@ -643,6 +646,7 @@ int main() {
                     else {
                         board.placePiece(current.shape, current.x, current.y, current.id);
                         int cleared = board.clearLines();
+                        holdUsed = false;
 
                         if (cleared) {
                             totalLines += cleared;
