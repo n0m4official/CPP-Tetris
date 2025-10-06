@@ -9,7 +9,15 @@
 #include <sstream>
 #include <regex>
 
+// Why in the actual hell did I make this as one script...
+// No like seriously, why the hell did I do that to myself?
+// Makes updating and debugging this physically painful...
+// I tried separating this into other files and it broke EVERYTHING... 
+// sigh... 
+// I hate myself for this...
+
 // NOTE: Windows-only implementation due to _kbhit(), _getch(), and Windows console API
+// NOTE: Linux and macOS compatibility in development, just REALLY difficult given the fact it's ONE script (why did I do that to myself...)
 
 using namespace std;
 
@@ -52,13 +60,14 @@ int getConsoleWidth() { // Console width calculated once per frame to center boa
     return width;
 }
 
-// Reset cursor back to top left (avoids flickering madness... mostly)
+// Reset cursor back to top left (avoids flickering madness... mostly, still flickers the cursor due to how the terminal renders stuff)
 void resetCursor() {
     COORD pos = { 0, 0 };
     SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos);
 }
 
 // Print text centered on X, with Y offset
+// This was needed because the console display is really dumb and doesn't consistently display correctly
 void printCentered(const string& text, int y) {
     int consoleWidth = getConsoleWidth();
     int x = max(0, (consoleWidth - (int)visibleLength(text)) / 2);
@@ -69,6 +78,7 @@ void printCentered(const string& text, int y) {
 
 // --- Start menu ---
 // This was way more annoying to make than it had any right to be
+// Made this before I properly figured out how to use arrays
 void showStartMenu() {
     system("cls");
     resetCursor();
@@ -147,9 +157,10 @@ void showGameExitedMenu(int score, int lines, int level) {
 // --- Game over menu ---
 // I stared at this for 3 hours straight fixing spacing bugs. Never again.
 bool showGameOverMenu(int score, int lines, int level) {
-    system("cls");
+    system("cls");      
     resetCursor();
 
+    // Array for menu display
     vector<string> linesToPrint = {
         "GAME OVER",
         "Final Score   : " + intToString(score),
@@ -201,6 +212,7 @@ public:
     vector<vector<int>> grid;
     Board() : grid(HEIGHT, vector<int>(WIDTH, 0)) {}
 
+    // Check if the peice can fit in the location
     bool isValidPosition(const vector<vector<int>>& shape, int x, int y) const {
         int h = (int)shape.size();
         int w = (int)shape[0].size();
@@ -220,6 +232,7 @@ public:
         return true;
     }
 
+    // Place peice
     void placePiece(const vector<vector<int>>& shape, int x, int y, int id) {
         for (int i = 0; i < (int)shape.size(); ++i) {
             for (int j = 0; j < (int)shape[0].size(); ++j) {
@@ -230,6 +243,7 @@ public:
         }
     }
 
+    // Clearing filled lines
     int clearLines() {
         int cleared = 0;
         for (int row = HEIGHT - 1; row >= 0; --row) {
@@ -243,6 +257,7 @@ public:
         return cleared;
     }
 
+    // Scores
     int scoreForLines(int lines, int level) {
         switch (lines) {
         case 1: return 40 * (level + 1);
@@ -497,6 +512,8 @@ void showPauseMenu(const Board& board, const Piece& current, int score, int line
     printCentered(resumeText, y + 2);
 }
 
+// --- Display the held piece ---
+// This broke on me so many times I nearly gave up this entire project. (I lost count after 50)
 void printHoldPiece(const Piece& hold) {
     int consoleWidth = getConsoleWidth();
     int boxWidth = 8; // 4 blocks * 2
