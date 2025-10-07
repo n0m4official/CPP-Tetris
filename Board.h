@@ -1,11 +1,14 @@
 #pragma once
 #include <vector>
+
 using namespace std;
 
 class Board {
 public:
     vector<vector<int>> grid; ///< 2D board grid
     Board();
+
+    // See Board.cpp for specifics on the following functions
     bool isValidPosition(const vector<vector<int>>& shape, int x, int y) const;
     void placePiece(const vector<vector<int>>& shape, int x, int y, int id);
     int clearLines();

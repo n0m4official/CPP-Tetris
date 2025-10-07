@@ -14,6 +14,7 @@
 using namespace std;
 
 // --- Constants ---
+// Standard Tetris board size of 10x20
 const int WIDTH = 10;   ///< Width of the Tetris board
 const int HEIGHT = 20;  ///< Height of the Tetris board
 
@@ -30,7 +31,6 @@ string COLORS[7] = {
 };
 
 // --- Utility Functions ---
-
 
 // Load custom colors from config file
 void loadColors() {
@@ -108,7 +108,6 @@ void printCentered(const string& text, int y) {
     SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos);
     cout << text;
 }
-
 
 // --- Menus ---
 
@@ -236,7 +235,6 @@ bool showGameOverMenu(int score, int lines, int level) {
 
 // --- Tetromino Logic ---
 
-
 // Standard Tetris pieces (7 pieces, 4x4 matrices)
 vector<vector<vector<int>>> TETROMINOES = {
     {   // I
@@ -330,7 +328,6 @@ int dropDistance(const Board& board, const Piece& piece) {
 
 
 // --- Rendering Functions ---
-
 
 // Draw board, current piece, and ghost piece
 void printBoard(const Board& board, const Piece& current, int score, int lines, int level) {
@@ -488,6 +485,7 @@ int main() {
     srand((unsigned)time(nullptr));
     loadColors();
     showStartMenu();
+    // TODO: Add a color customization menu
 
     bool restart = true;
     while (restart) {

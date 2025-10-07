@@ -2,12 +2,9 @@
 #include <algorithm>
 
 // --- Board & logic ---
-// Handling the board state and line clearing.
-// This class ate two days of my life. I hate line clearing logic.
-// It works now though, so whatever.
+Board::Board() : grid(20, vector<int>(10, 0)) {}    ///< Board size (10x20 - standard Tetris size)
 
-Board::Board() : grid(20, vector<int>(10, 0)) {}
-
+// Checks if the position is reachable and able to fit the current piece
 bool Board::isValidPosition(const vector<vector<int>>& shape, int x, int y) const {
     int h = (int)shape.size();
     int w = (int)shape[0].size();
@@ -21,12 +18,14 @@ bool Board::isValidPosition(const vector<vector<int>>& shape, int x, int y) cons
     return true;
 }
 
+// Piece placing logic
 void Board::placePiece(const vector<vector<int>>& shape, int x, int y, int id) {
     for (int i = 0; i < (int)shape.size(); ++i)
         for (int j = 0; j < (int)shape[0].size(); ++j)
             if (shape[i][j]) grid[y + i][x + j] = id + 1;
 }
 
+// Handles line clearing
 int Board::clearLines() {
     int cleared = 0;
     for (int row = 19; row >= 0; --row) {
@@ -40,6 +39,7 @@ int Board::clearLines() {
     return cleared;
 }
 
+// Scores for number of cleared lines
 int Board::scoreForLines(int lines, int level) {
     switch (lines) {
     case 1: return 40 * (level + 1);
