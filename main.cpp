@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <algorithm>
 #include <cstdlib>
@@ -8,27 +9,17 @@
 #include <Windows.h>
 #include <sstream>
 #include <regex>
-
-// Why in the actual hell did I make this as one script...
-// No like seriously, why the hell did I do that to myself?
-// Makes updating and debugging this physically painful...
-// I tried separating this into other files and it broke EVERYTHING... 
-// sigh... 
-// I hate myself for this...
-
-// NOTE: Windows-only implementation due to _kbhit(), _getch(), and Windows console API
-// NOTE: Linux and macOS compatibility in development, just REALLY difficult given the fact it's ONE script (why did I do that to myself...)
+#include "Board.h"
 
 using namespace std;
 
-const int WIDTH = 10;
-const int HEIGHT = 20;
+// --- Constants ---
+const int WIDTH = 10;   ///< Width of the Tetris board
+const int HEIGHT = 20;  ///< Height of the Tetris board
 
-// --- Colors ---
-// ANSI escape codes for colors
-// Funny number make color, I guess...
+// ANSI escape codes for colors (Windows ANSI support)
 const string RESET = "\033[0m";
-const string COLORS[7] = {
+string COLORS[7] = {
     "\033[36m",
     "\033[33m",
     "\033[35m",
@@ -38,20 +29,63 @@ const string COLORS[7] = {
     "\033[91m"
 };
 
-// Utility to convert int to string (std::to_string broke on me too many times)
+// --- Utility Functions ---
+
+
+// Load custom colors from config file
+void loadColors() {
+    ifstream file("colors.cfg");
+    if (!file.is_open()) return; // First run, file doesn't exist
+
+    string line;
+    int i = 0;
+    while (getline(file, line) && 1 < 7) {
+        COLORS[i] = line;
+        i++;
+    }
+    file.close();
+}
+
+// Save custom colors to config file
+void saveColors() {
+    ofstream file("colors.cfg");
+    for (int i = 0; i < 7; i++) {
+        file << COLORS[i] << "\n";
+    }
+    file.close();
+}
+
+// Interactive color customization
+void customizeColors() {
+    string names[7] = { "Cyan", "Yellow", "Magenta", "Green", "Blue", "Red", "Bright Red" };
+    string codes[7] = { "\033[36m","\033[33m","\033[35m","\033[32m","\033[34m","\033[31m","\033[91m" };
+
+    for (int i = 0; i < 7; i++) {
+        cout << "Choose color for piece " << i << " (" << names[i] << "):\n";
+        for (int j = 0; j < 7; j++) {
+            cout << j << ": " << codes[j] << "[]" << RESET << " " << names[j] << "\n";
+        }
+        int choice = 0;
+        cin >> choice;
+        if (choice >= 0 && choice < 7) COLORS[i] = codes[choice];
+    }
+    saveColors();
+}
+
+// Convert integer to string (safe alternative to std::to_string)
 string intToString(int n) {
     stringstream ss;
     ss << n;
     return ss.str();
 }
 
-// Strip ANSI codes for accurate length (alighnments were cursed without this)
+// Strip ANSI color codes for accurate string length
 int visibleLength(const string& s) {
     return regex_replace(s, regex("\033\\[[0-9;]*m"), "").size();
 }
 
-// Console width detection (Windows console API sorcery)
-int getConsoleWidth() { // Console width calculated once per frame to center board and UI
+// Get current colsole width for centered UI
+int getConsoleWidth() {
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     int width = 80;
     if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
@@ -60,14 +94,13 @@ int getConsoleWidth() { // Console width calculated once per frame to center boa
     return width;
 }
 
-// Reset cursor back to top left (avoids flickering madness... mostly, still flickers the cursor due to how the terminal renders stuff)
+// Reset cursor back to top-left corner
 void resetCursor() {
     COORD pos = { 0, 0 };
     SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos);
 }
 
-// Print text centered on X, with Y offset
-// This was needed because the console display is really dumb and doesn't consistently display correctly
+// Print text centered horizontally at specific row
 void printCentered(const string& text, int y) {
     int consoleWidth = getConsoleWidth();
     int x = max(0, (consoleWidth - (int)visibleLength(text)) / 2);
@@ -76,9 +109,10 @@ void printCentered(const string& text, int y) {
     cout << text;
 }
 
-// --- Start menu ---
-// This was way more annoying to make than it had any right to be
-// Made this before I properly figured out how to use arrays
+
+// --- Menus ---
+
+// Display start menu
 void showStartMenu() {
     system("cls");
     resetCursor();
@@ -105,7 +139,7 @@ void showStartMenu() {
         }
         printCentered(prompt, y);
         Sleep(500);
-        printCentered(string(visibleLength(prompt), ' '), y); // erase
+        printCentered(string(visibleLength(prompt), ' '), y); // clear
         Sleep(500);
     }
 
@@ -113,8 +147,7 @@ void showStartMenu() {
     resetCursor();
 }
 
-// --- Game exited menu ---
-// Basically the ragequit screen
+// Display exit menu (when user quits mid-game)
 void showGameExitedMenu(int score, int lines, int level) {
     system("cls");
     resetCursor();
@@ -154,8 +187,7 @@ void showGameExitedMenu(int score, int lines, int level) {
     resetCursor();
 }
 
-// --- Game over menu ---
-// I stared at this for 3 hours straight fixing spacing bugs. Never again.
+// Display game over menu with restart option
 bool showGameOverMenu(int score, int lines, int level) {
     system("cls");      
     resetCursor();
@@ -202,116 +234,48 @@ bool showGameOverMenu(int score, int lines, int level) {
     }
 }
 
+// --- Tetromino Logic ---
 
-// --- Board & logic ---
-// Handling the board state and line clearing.
-// This class ate two days of my life. I hate line clearing logic.
-// It works now though, so whatever.
-class Board {
-public:
-    vector<vector<int>> grid;
-    Board() : grid(HEIGHT, vector<int>(WIDTH, 0)) {}
 
-    // Check if the peice can fit in the location
-    bool isValidPosition(const vector<vector<int>>& shape, int x, int y) const {
-        int h = (int)shape.size();
-        int w = (int)shape[0].size();
-        for (int i = 0; i < h; ++i) {
-            for (int j = 0; j < w; ++j) {
-                if (shape[i][j]) {
-                    int nx = x + j, ny = y + i;
-                    if (nx < 0 || nx >= WIDTH || ny < 0 || ny >= HEIGHT) {
-                        return false;
-                    }
-                    if (grid[ny][nx] != 0) {
-                        return false;
-                    }
-                }
-            }
-        }
-        return true;
-    }
-
-    // Place peice
-    void placePiece(const vector<vector<int>>& shape, int x, int y, int id) {
-        for (int i = 0; i < (int)shape.size(); ++i) {
-            for (int j = 0; j < (int)shape[0].size(); ++j) {
-                if (shape[i][j]) {
-                    grid[y + i][x + j] = id + 1;
-                }
-            }
-        }
-    }
-
-    // Clearing filled lines
-    int clearLines() {
-        int cleared = 0;
-        for (int row = HEIGHT - 1; row >= 0; --row) {
-            if (all_of(grid[row].begin(), grid[row].end(), [](int c) { return c != 0; })) {
-                grid.erase(grid.begin() + row);
-                grid.insert(grid.begin(), vector<int>(WIDTH, 0));
-                ++cleared;
-                ++row;
-            }
-        }
-        return cleared;
-    }
-
-    // Scores
-    int scoreForLines(int lines, int level) {
-        switch (lines) {
-        case 1: return 40 * (level + 1);
-        case 2: return 100 * (level + 1);
-        case 3: return 300 * (level + 1);
-        case 4: return 1200 * (level + 1);
-        default: return 0;
-        }
-    }
-};
-
-// --- Tetrominoes ---
-// 7 standard Tetris pieces in 4x4 matrices
-// 0 = empty, 1 = filled
-// Indexed 0-6 for easy random selection
-// Took me way too long to get these right, I hate binary literals...
+// Standard Tetris pieces (7 pieces, 4x4 matrices)
 vector<vector<vector<int>>> TETROMINOES = {
-    {
+    {   // I
         {0,0,0,0},
         {1,1,1,1},
         {0,0,0,0},
         {0,0,0,0}
     },
-    {
+    {   // O
         {0,0,0,0},
         {0,1,1,0},
         {0,1,1,0},
         {0,0,0,0}
     },
-    {
+    {   // T
         {0,1,0,0},
         {1,1,1,0},
         {0,0,0,0},
         {0,0,0,0}
     },
-    {
+    {   // J
         {0,0,0,0},
         {0,0,1,0},
         {1,1,1,0},
         {0,0,0,0}
     },
-    {
+    {   // L
         {0,0,0,0},
         {1,0,0,0},
         {1,1,1,0},
         {0,0,0,0}
     },
-    {
+    {   // S
         {0,0,0,0},
         {0,1,1,0},
         {1,1,0,0},
         {0,0,0,0}
     },
-    {
+    {   // Z
         {0,0,0,0},
         {1,1,0,0},
         {0,1,1,0},
@@ -319,9 +283,8 @@ vector<vector<vector<int>>> TETROMINOES = {
     }
 };
 
-// --- Rotation ---
+
 // Rotate a piece 90 degrees clockwise
-// This was incredibly annoying to get it to work properly
 vector<vector<int>> rotateCW(const vector<vector<int>>& shape) {
     int n = (int)shape.size();
     vector<vector<int>> r(n, vector<int>(n, 0));
@@ -333,18 +296,14 @@ vector<vector<int>> rotateCW(const vector<vector<int>>& shape) {
     return r;
 }
 
-// --- Piece spawning & ghost piece calculation ---
-// Piece struct to hold shape, position, and ID
-// Excessive for this simple game, but whatever, was fun to make
+// Piece representation
 struct Piece {
-    vector<vector<int>> shape;
-    int x, y, id;
+    vector<vector<int>> shape;  ///< 4x4 matrix
+    int x, y;                   ///< Position on board
+    int id;                     ///< Piece type/color
 };
 
 // Spawn a new piece at the top center
-// ID is used for color and shape selection
-// Starts at y=0, x=centered
-// Why was this so hard to get to work?
 Piece spawnPiece(int id) {
     return Piece{
         TETROMINOES[id], WIDTH / 2 - 2, 0, id
@@ -352,10 +311,6 @@ Piece spawnPiece(int id) {
 }
 
 // Calculate ghost piece Y position
-// Ghost piece shows where the current piece would land if dropped
-// Does not modify the piece, just calculates the position
-// Do not ask me why this was so hard to get right, I have no idea
-// It just... was.
 int getGhostY(const Board& board, const Piece& current) {
     int y = current.y;
     while (board.isValidPosition(current.shape, current.x, y + 1)) {
@@ -364,10 +319,7 @@ int getGhostY(const Board& board, const Piece& current) {
     return y;
 }
 
-// Calculate drop distance for hard drop
-// Returns how many rows the piece can drop
-// Used for hard drop functionality
-// Some was easy after I got ghost piece working
+// Calculate hard drop distance
 int dropDistance(const Board& board, const Piece& piece) {
     int dist = 0;
     while (board.isValidPosition(piece.shape, piece.x, piece.y + dist + 1)) {
@@ -376,18 +328,11 @@ int dropDistance(const Board& board, const Piece& piece) {
     return dist;
 }
 
-// --- Draw board centered ---
-// Draws the board with current piece and ghost piece
-// Centers the board in the console
-// Uses ANSI colors for pieces
-// Ghost piece is drawn in dim color
-// Current piece is drawn normally
-// Placed pieces are drawn in their respective colors
-// Empty spaces are blank
-// This function... this funtion is the reason I had to implement console width detection...
-// It was a nightmare to get the alignment right, but it works now.
-// Also avoids flickering by resetting cursor position instead of clearing screen
-// I lost so much sleep over this... I wish I was kidding.
+
+// --- Rendering Functions ---
+
+
+// Draw board, current piece, and ghost piece
 void printBoard(const Board& board, const Piece& current, int score, int lines, int level) {
     int consoleWidth = getConsoleWidth();
     int boardWidth = WIDTH * 2 + 2;
@@ -411,7 +356,7 @@ void printBoard(const Board& board, const Piece& current, int score, int lines, 
                 cout << COLORS[current.id] << "[]" << RESET;
             }
             else if (!occupied && y >= ghostY && y < ghostY + (int)current.shape.size() && sx >= 0 && sx < (int)current.shape[0].size() && current.shape[y - ghostY][sx]) {
-                cout << "\033[90m" << "[]" << RESET;
+                cout << "\033[90m" << "[]" << RESET; // ghost piece
             }
             else if (occupied) {
                 cout << COLORS[pieceId] << "[]" << RESET;
@@ -425,11 +370,7 @@ void printBoard(const Board& board, const Piece& current, int score, int lines, 
     cout << string(offsetX, ' ') << "+" << string(WIDTH * 2, '-') << "+\n";
 }
 
-// --- Draw next piece centered relative to board ---
-// Draws the next piece in a small box to the right of the board
-// Centers the box relative to the board
-// Uses ANSI colors for pieces
-// This was way easier than the main board, somehow...
+// Draw next piece preview
 void printNextPiece(const Piece& next) {
     int consoleWidth = getConsoleWidth();
     int boxWidth = 8; // 4 blocks * 2
@@ -463,8 +404,7 @@ void printNextPiece(const Piece& next) {
 Piece hold{ {}, 0, 0, -1 }; // initially empty
 bool holdUsed = false;      // can only hold once per piece
 
-// --- Pause menu ---
-// Honestly, this pause menu was not needed for this... but I wanted to try dimming the board out and it was fun to make :)
+// Pause menu overlay
 void showPauseMenu(const Board& board, const Piece& current, int score, int lines, int level) {
     // Redraw board in dim mode
     int consoleWidth = getConsoleWidth();
@@ -512,8 +452,7 @@ void showPauseMenu(const Board& board, const Piece& current, int score, int line
     printCentered(resumeText, y + 2);
 }
 
-// --- Display the held piece ---
-// This broke on me so many times I nearly gave up this entire project. (I lost count after 50)
+// Draw held piece
 void printHoldPiece(const Piece& hold) {
     int consoleWidth = getConsoleWidth();
     int boxWidth = 8; // 4 blocks * 2
@@ -544,16 +483,10 @@ void printHoldPiece(const Piece& hold) {
     }
 }
 
-// --- Main ---
-// Game loop handling input, timing, and state
-// Uses _kbhit and _getch for non-blocking input
-// Uses clock() for timing piece falls
-// Adjusts fall speed based on level
-// Handles piece movement, rotation, hard drop, line clearing, scoring, and game over
-// This thing was such a pain to get right, I am pretty sure I lost 3 days of my life to this stupid part.
-// But it works now, so whatever.
+// --- Main Game Loop ---
 int main() {
     srand((unsigned)time(nullptr));
+    loadColors();
     showStartMenu();
 
     bool restart = true;
