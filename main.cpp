@@ -7,9 +7,12 @@
 #include <conio.h>
 #include <string>
 #include <Windows.h>
+#include <queue>
 #include <sstream>
 #include <regex>
 #include "Board.h"
+#include "Highscores.h"
+#include "ConsoleUtils.h"
 
 using namespace std;
 
@@ -30,7 +33,21 @@ string COLORS[7] = {
     "\033[91m"
 };
 
-// --- Utility Functions ---
+// Wall kick offsets for pieces J, L, T, S, Z (O doesn't need wall kicks)
+const vector<pair<int, int>> JLTSZ_WALL_KICKS[4] = {
+    {{0,0},{-1,0},{-1,1},{0,-2},{-1,-2}},  // 0->R
+    {{0,0},{1,0},{1,-1},{0,2},{1,2}},      // R->2
+    {{0,0},{1,0},{1,1},{0,-2},{1,-2}},     // 2->L
+    {{0,0},{-1,0},{-1,-1},{0,2},{-1,2}}    // L->0
+};
+
+// Wall kick offsets for I piece
+const vector<pair<int, int>> I_WALL_KICKS[4] = {
+    {{0,0},{-2,0},{1,0},{-2,-1},{1,2}},  // 0->R
+    {{0,0},{-1,0},{2,0},{-1,2},{2,-1}},  // R->2
+    {{0,0},{2,0},{-1,0},{2,1},{-1,-2}},  // 2->L
+    {{0,0},{1,0},{-2,0},{1,-2},{-2,1}}   // L->0
+};
 
 // Load custom colors from config file
 void loadColors() {
@@ -72,73 +89,60 @@ void customizeColors() {
     saveColors();
 }
 
-// Convert integer to string (safe alternative to std::to_string)
-string intToString(int n) {
-    stringstream ss;
-    ss << n;
-    return ss.str();
-}
-
-// Strip ANSI color codes for accurate string length
-int visibleLength(const string& s) {
-    return regex_replace(s, regex("\033\\[[0-9;]*m"), "").size();
-}
-
-// Get current colsole width for centered UI
-int getConsoleWidth() {
-    CONSOLE_SCREEN_BUFFER_INFO csbi;
-    int width = 80;
-    if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
-        width = csbi.srWindow.Right - csbi.srWindow.Left + 1;
-    }
-    return width;
-}
-
-// Reset cursor back to top-left corner
-void resetCursor() {
-    COORD pos = { 0, 0 };
-    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos);
-}
-
-// Print text centered horizontally at specific row
-void printCentered(const string& text, int y) {
-    int consoleWidth = getConsoleWidth();
-    int x = max(0, (consoleWidth - (int)visibleLength(text)) / 2);
-    COORD pos = { (SHORT)x, (SHORT)y };
-    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos);
-    cout << text;
-}
-
 // --- Menus ---
 
 // Display start menu
+// --- Start Menu with Highscores ---
 void showStartMenu() {
     system("cls");
     resetCursor();
 
     string border = "====================================";
     printCentered("\033[1;36m" + border + "\033[0m", 5);
-    printCentered("\033[1;36m           TETRIS v1.1.5            \033[0m", 6);
+    printCentered("\033[1;36m           TETRIS v1.2.5            \033[0m", 6);
     printCentered("\033[1;36m          By n0m4official           \033[0m", 7);
     printCentered("\033[1;36m" + border + "\033[0m", 8);
 
+    // --- Controls ---
     printCentered("\033[1;33mControls:\033[0m", 10);
     printCentered("A / D : Move Left / Right", 11);
     printCentered("W     : Rotate", 12);
     printCentered("C     : Hold piece", 13);
     printCentered("S     : Soft Drop", 14);
     printCentered("Space : Hard Drop", 15);
-    printCentered("Q     : Quit", 16);
 
-    string prompt = "\033[1;32mPress ENTER to start...\033[0m";
-    int y = 18;
+    printCentered("\033[1;33mC: Customize Colors\033[0m", 17);
+    printCentered("\033[1;33mQ: Quit\033[0m", 18);
+
+    // --- Load and display highscores ---
+    std::vector<HighscoreEntry> highscores = loadHighscores("highscores.txt");
+    printCentered("\033[1;36m=== HIGHSCORES ===\033[0m", 20);
+    int y = 21;
+    int rank = 1;
+    for (const auto& entry : highscores) {
+        printCentered(std::to_string(rank) + ". " + entry.name + " - " + std::to_string(entry.score), y++);
+        rank++;
+        if (rank > 10) break; // show top 10
+    }
+
+    // --- Prompt to start ---
+    string prompt = "\033[1;32mPress ENTER to start game...\033[0m";
+    int promptY = y + 1;
     while (true) {
-        if (_kbhit() && _getch() == '\r') {
-            break;
+        if (_kbhit()) {
+            char c = _getch();
+            if (c == '\r') break; // start game
+            if (c == 'c' || c == 'C') {
+                customizeColors();
+                system("cls");
+                showStartMenu(); // restart menu after customizing
+                return;
+            }
+            if (c == 'q' || c == 'Q') exit(0);
         }
-        printCentered(prompt, y);
+        printCentered(prompt, promptY);
         Sleep(500);
-        printCentered(string(visibleLength(prompt), ' '), y); // clear
+        printCentered(string(visibleLength(prompt), ' '), promptY); // blinking effect
         Sleep(500);
     }
 
@@ -161,7 +165,7 @@ void showGameExitedMenu(int score, int lines, int level) {
 
     size_t maxLen = 0;
     for (const auto& l : linesToPrint) {
-        maxLen = max(maxLen, visibleLength(l));
+        maxLen = std::max(maxLen, static_cast<size_t>(visibleLength(l)));
     }
     string border(maxLen + 4, '=');
 
@@ -177,43 +181,43 @@ void showGameExitedMenu(int score, int lines, int level) {
 
     while (true) {
         if (_kbhit() && _getch() == '\r') {
-            break;
+            system("cls");
+            showStartMenu();
+            return;
         }
         Sleep(10);
     }
-
     system("cls");
     resetCursor();
 }
 
 // Display game over menu with restart option
+#include <limits> // for std::numeric_limits
+
 bool showGameOverMenu(int score, int lines, int level) {
-    system("cls");      
+    system("cls");
     resetCursor();
 
-    // Array for menu display
-    vector<string> linesToPrint = {
-        "GAME OVER",
-        "Final Score   : " + intToString(score),
-        "Lines Cleared : " + intToString(lines),
-        "Level Reached : " + intToString(level),
-        "Press R to Restart or Q to Quit..."
-    };
+    // Ask player for name
+    std::string playerName;
+    printCentered("GAME OVER", 5);
+    printCentered("Final Score: " + intToString(score), 7);
+    printCentered("Enter your name (max 10 chars): ", 9);
 
-    size_t maxLen = 0;
-    for (const auto& l : linesToPrint) {
-        maxLen = max(maxLen, visibleLength(l));
-    }
-    string border(maxLen + 4, '=');
+    std::cin >> playerName;
+    if (playerName.length() > 10)
+        playerName = playerName.substr(0, 10);
 
-    printCentered("\033[1;31m" + border + "\033[0m", 5);
-    printCentered("\033[1;31m  " + linesToPrint[0] + "  \033[0m", 6);
-    printCentered("\033[1;31m" + border + "\033[0m", 7);
+    // Load, update, save highscores
+    std::vector<HighscoreEntry> highscores = loadHighscores("highscores.txt");
+    addHighscore(highscores, { playerName, score });
+    saveHighscores(highscores, "highscores.txt");
 
-    printCentered("\033[1;33m" + linesToPrint[1] + "\033[0m", 9);
-    printCentered("\033[1;33m" + linesToPrint[2] + "\033[0m", 10);
-    printCentered("\033[1;33m" + linesToPrint[3] + "\033[0m", 11);
-    printCentered("\033[1;32m" + linesToPrint[4] + "\033[0m", 13);
+    // Show updated highscores
+    showHighscores(highscores, playerName);
+
+    // Ask to restart or quit
+    printCentered("Press R to Restart or Q to Quit...", 16);
 
     while (true) {
         if (_kbhit()) {
@@ -299,6 +303,7 @@ struct Piece {
     vector<vector<int>> shape;  ///< 4x4 matrix
     int x, y;                   ///< Position on board
     int id;                     ///< Piece type/color
+    int rotation;
 };
 
 // Spawn a new piece at the top center
@@ -325,6 +330,36 @@ int dropDistance(const Board& board, const Piece& piece) {
     }
     return dist;
 }
+
+bool tryRotateSRS(Piece& piece, const Board& board) {
+    int prevRot = piece.rotation;
+    int nextRot = (piece.rotation + 1) % 4;
+
+    auto rotated = rotateCW(piece.shape);
+
+    const vector<pair<int, int>>* kicks;
+    if (piece.id == 0) // I-piece
+        kicks = I_WALL_KICKS;
+    else if (piece.id == 1) // O-piece
+        return true; // O-piece doesn't need kicks, just rotate in place
+    else
+        kicks = JLTSZ_WALL_KICKS;
+
+    // Try all wall kick offsets
+    for (auto [dx, dy] : kicks[prevRot]) {
+        int newX = piece.x + dx;
+        int newY = piece.y + dy;
+        if (board.isValidPosition(rotated, newX, newY)) {
+            piece.shape = rotated;
+            piece.x = newX;
+            piece.y = newY;
+            piece.rotation = nextRot;
+            return true;
+        }
+    }
+    return false; // rotation failed even after kicks
+}
+
 
 
 // --- Rendering Functions ---
@@ -368,32 +403,43 @@ void printBoard(const Board& board, const Piece& current, int score, int lines, 
 }
 
 // Draw next piece preview
-void printNextPiece(const Piece& next) {
-    int consoleWidth = getConsoleWidth();
-    int boxWidth = 8; // 4 blocks * 2
-    int offsetX = max(0, (consoleWidth - WIDTH * 2 - boxWidth) / 2 + WIDTH * 2 + 4);
+const int QUEUE_SIZE = 5;
+std::queue<Piece> nextQueue; // global queue
 
-    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+// Render next queue (takes a copy)
+void printNextQueue(const std::queue<Piece>& q) { // pass by const reference
+    std::queue<Piece> copy = q; // local copy
+
+    int consoleWidth = getConsoleWidth();
+    int boxWidth = 8;
+    int offsetX = max(0, (consoleWidth - WIDTH * 2 - boxWidth) / 2 + WIDTH * 2 + 4);
     int verticalOffset = 3;
 
-    for (int y = 0; y < 6; ++y) {
-        COORD pos = { (SHORT)offsetX, (SHORT)(y + verticalOffset) };
-        SetConsoleCursorPosition(hOut, pos);
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
 
-        if (y == 0 || y == 5) {
-            cout << "+" << string(8, '-') << "+";
-        }
-        else {
-            cout << "|";
-            for (int x = 0; x < 4; ++x) {
-                if (next.shape[y - 1][x]) {
-                    cout << COLORS[next.id] << "[]" << RESET;
-                }
-                else {
-                    cout << "  ";
-                }
+    for (int i = 0; i < QUEUE_SIZE && !copy.empty(); i++) {
+        Piece p = copy.front();
+        copy.pop();
+
+        for (int y = 0; y < 6; y++) {
+            COORD pos = { (SHORT)offsetX, (SHORT)(verticalOffset + y + i * 6) };
+            SetConsoleCursorPosition(hOut, pos);
+
+            if (y == 0 || y == 5) {
+                cout << "+" << string(8, '-') << "+";
             }
-            cout << "|";
+            else {
+                cout << "|";
+                for (int x = 0; x < 4; x++) {
+                    if (p.shape[y - 1][x]) {
+                        cout << COLORS[p.id] << "[]" << RESET;
+                    }
+                    else {
+                        cout << "  ";
+                    }
+                }
+                cout << "|";
+            }
         }
     }
 }
@@ -485,7 +531,6 @@ int main() {
     srand((unsigned)time(nullptr));
     loadColors();
     showStartMenu();
-    // TODO: Add a color customization menu
 
     bool restart = true;
     while (restart) {
@@ -495,8 +540,14 @@ int main() {
         int fallInterval = BASE_INTERVAL;
         clock_t lastFall = clock();
 
-        Piece current = spawnPiece(rand() % 7);
-        Piece next = spawnPiece(rand() % 7);
+        // --- Initialize nextQueue ---
+        while (!nextQueue.empty()) nextQueue.pop();
+        for (int i = 0; i < QUEUE_SIZE; i++) {
+            nextQueue.push(spawnPiece(rand() % 7));
+        }
+
+        Piece current = nextQueue.front(); nextQueue.pop();
+        nextQueue.push(spawnPiece(rand() % 7));
 
         Piece hold;
         hold.id = -1;
@@ -507,82 +558,73 @@ int main() {
         bool paused = false;
 
         while (running) {
+            // --- Input Handling ---
             if (_kbhit()) {
                 char cmd = _getch();
                 if (!paused) {
-                    if (cmd == 'a' && board.isValidPosition(current.shape, current.x - 1, current.y)) {
-                        current.x--; dirty = true;
-                    }
-                    if (cmd == 'd' && board.isValidPosition(current.shape, current.x + 1, current.y)) {
-                        current.x++; dirty = true;
-                    }
-                    if (cmd == 'w') {
-                        auto r = rotateCW(current.shape);
-                        if (board.isValidPosition(r, current.x, current.y)) {
-                            current.shape = r; dirty = true;
-                        }
-                        // TODO: Implement wall kicks for rotation near walls
-                    }
-                    if (cmd == 's') {
-                        if (board.isValidPosition(current.shape, current.x, current.y + 1)) {
-                            current.y++; dirty = true;
-                        }
-                    }
-                    if (cmd == ' ') {
+                    if (cmd == 'a' && board.isValidPosition(current.shape, current.x - 1, current.y)) { current.x--; dirty = true; }
+                    if (cmd == 'd' && board.isValidPosition(current.shape, current.x + 1, current.y)) { current.x++; dirty = true; }
+                    if (cmd == 'w') { if (tryRotateSRS(current, board)) dirty = true; }
+                    if (cmd == 's') { if (board.isValidPosition(current.shape, current.x, current.y + 1)) { current.y++; dirty = true; } }
+
+                    if (cmd == ' ') { // HARD DROP
                         int dist = dropDistance(board, current);
                         current.y += dist;
+
+                        // Place piece immediately
+                        board.placePiece(current.shape, current.x, current.y, current.id);
+                        int cleared = board.clearLines();
+                        totalLines += cleared;
+                        score += board.scoreForLines(cleared, level);
+                        holdUsed = false;
+
+                        // Advance queue
+                        current = nextQueue.front(); nextQueue.pop();
+                        nextQueue.push(spawnPiece(rand() % 7));
+
+                        // Check game over
+                        if (!board.isValidPosition(current.shape, current.x, current.y)) {
+                            resetCursor();
+                            printBoard(board, current, score, totalLines, level);
+                            printNextQueue(nextQueue);
+                            restart = showGameOverMenu(score, totalLines, level);
+                            running = false;
+                            break;
+                        }
+
                         dirty = true;
-                        lastFall = clock() - fallInterval;
-                    }
-                    if (cmd == 'q' || cmd == 'Q') {
-                        running = false;
-                        showGameExitedMenu(score, totalLines, level);
-                        restart = true;
-                        break;
-                    }
-                    if (cmd == 'p' || cmd == 'P') {
-                        paused = true;
-                        showPauseMenu(board, current, score, totalLines, level);
+                        lastFall = clock();
                     }
 
-                    if (cmd == 'c' || cmd == 'C') { // Hold piece
+                    if (cmd == 'c' || cmd == 'C') { // HOLD PIECE
                         if (!holdUsed) {
-                            if (hold.id == -1) {            // first time holding
-                                hold = current;             // move current piece to hold
-                                current = next;             // next piece becomes current
-                                next = spawnPiece(rand() % 7);
+                            if (hold.id == -1) { // first hold
+                                hold = current;
+                                current = nextQueue.front(); nextQueue.pop();
+                                nextQueue.push(spawnPiece(rand() % 7));
                             }
                             else {
-                                // Manual swap of pieces
                                 Piece temp = current;
                                 current = hold;
                                 hold = temp;
-
-                                // Reset current piece position after swap
                                 current.x = WIDTH / 2 - 2;
                                 current.y = 0;
                             }
-                            holdUsed = true; // prevent multiple holds before piece locks
-                            dirty = true;    // redraw board
+                            holdUsed = true;
+                            dirty = true;
                         }
                     }
+
+                    if (cmd == 'q' || cmd == 'Q') { running = false; showGameExitedMenu(score, totalLines, level); restart = true; break; }
+                    if (cmd == 'p' || cmd == 'P') { paused = true; showPauseMenu(board, current, score, totalLines, level); }
                 }
-                else {
-                    // While paused
-                    if (cmd == 'p' || cmd == 'P') {
-                        paused = false;
-                        system("cls");
-                        dirty = true; // refresh board on resume
-                    }
-                    if (cmd == 'q' || cmd == 'Q') {
-                        running = false;
-                        showGameExitedMenu(score, totalLines, level);
-                        restart = true;
-                        break;
-                    }
+                else { // Paused
+                    if (cmd == 'p' || cmd == 'P') { paused = false; system("cls"); dirty = true; }
+                    if (cmd == 'q' || cmd == 'Q') { running = false; showGameExitedMenu(score, totalLines, level); restart = true; break; }
                 }
             }
 
+            // --- Automatic piece fall ---
             if (!paused) {
                 clock_t now = clock();
                 if ((now - lastFall) * 1000 / CLOCKS_PER_SEC >= fallInterval) {
@@ -592,46 +634,48 @@ int main() {
                         dirty = true;
                     }
                     else {
+                        // Lock piece
                         board.placePiece(current.shape, current.x, current.y, current.id);
                         int cleared = board.clearLines();
+                        totalLines += cleared;
+                        score += board.scoreForLines(cleared, level);
                         holdUsed = false;
 
-                        if (cleared) {
-                            totalLines += cleared;
-                            score += board.scoreForLines(cleared, level);
-                        }
+                        // Advance queue
+                        current = nextQueue.front(); nextQueue.pop();
+                        nextQueue.push(spawnPiece(rand() % 7));
 
-                        level = totalLines / 10;
-                        fallInterval = max(100, BASE_INTERVAL - level * 100);
-
-                        current = next;
-                        next = spawnPiece(rand() % 7);
-                        dirty = true;
-
+                        // Check game over
                         if (!board.isValidPosition(current.shape, current.x, current.y)) {
                             resetCursor();
                             printBoard(board, current, score, totalLines, level);
-                            printNextPiece(next);
+                            printNextQueue(nextQueue);
                             restart = showGameOverMenu(score, totalLines, level);
+                            running = false;
                             break;
                         }
+                        dirty = true;
+
+                        // Update level & fall speed
+                        level = totalLines / 10;
+                        fallInterval = max(100, BASE_INTERVAL - level * 100);
                     }
                 }
             }
 
+            // --- Rendering ---
             if (dirty && !paused) {
                 resetCursor();
                 printBoard(board, current, score, totalLines, level);
-                printNextPiece(next);
+                printNextQueue(nextQueue);
                 printHoldPiece(hold);
                 dirty = false;
             }
-            Sleep(16);
-        }
-        if (!running) {
-            break;
+
+            Sleep(16); // ~60 FPS
         }
     }
+
     return 0;
 }
 
