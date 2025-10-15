@@ -403,7 +403,7 @@ void printBoard(const Board& board, const Piece& current, int score, int lines, 
 }
 
 // Draw next piece preview
-const int QUEUE_SIZE = 5;
+const int QUEUE_SIZE = 3;
 std::queue<Piece> nextQueue; // global queue
 
 // Render next queue (takes a copy)
@@ -412,7 +412,7 @@ void printNextQueue(const std::queue<Piece>& q) { // pass by const reference
 
     int consoleWidth = getConsoleWidth();
     int boxWidth = 8;
-    int offsetX = max(0, (consoleWidth - WIDTH * 2 - boxWidth) / 2 + WIDTH * 2 + 4);
+    int offsetX = max(0, (consoleWidth - WIDTH * 2 - boxWidth) / 2 + WIDTH + 20);
     int verticalOffset = 3;
 
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
