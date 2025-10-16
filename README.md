@@ -1,5 +1,7 @@
 # CPP-Tetris
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/n0m4official/CPP-Tetris)
+
 A polished, feature-rich Tetris® clone for the Windows console, written in modern C++.  
 **Created by [n0m4official](https://github.com/n0m4official)**
 
