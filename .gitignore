@@ -10,6 +10,8 @@
 *.userosscache
 *.sln.docstates
 
+*.db
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
@@ -361,3 +363,12 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Game state and secret persistence
+.profile.db
+highscores.txt
+colors.cfg
+
+# Secret feature system
+_SecretProtocol_real.cpp
+_SecretProtocol_real.h

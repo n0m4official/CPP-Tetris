@@ -20,6 +20,12 @@
     <ClCompile Include="Highscores.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="_SecretProtocol_real.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="_SecretProtocol.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Board.h">
@@ -29,6 +35,12 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="ConsoleUtils.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="_SecretProtocol_real.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="_SecretProtocol.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
