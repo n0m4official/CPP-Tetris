@@ -131,6 +131,14 @@ Key modules & functions:
 
 ---
 
+## 🐞 Known Bugs
+
+- `loadColors` uses the literal condition `1 < 7` in its loop, so the index climbs indefinitely if `colors.cfg` has more than seven lines, causing out-of-bounds writes to `COLORS`.
+- `Highscores.cpp` relies on `std::numeric_limits` without including `<limits>`, which breaks standalone builds of that translation unit.
+- The game accepts 10-character player names on game-over entry, but `loadHighscores` truncates every stored name to three characters when reloading from disk.
+
+---
+
 ## ⚠️ Disclaimer
 
 Tetris® is a registered trademark of The Tetris Company.  
