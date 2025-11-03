@@ -1,5 +1,7 @@
 # CPP-Tetris
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/n0m4official/CPP-Tetris)
+
 A polished, feature-rich Tetris® clone for the Windows console, written in modern C++.  
 **Created by [n0m4official](https://github.com/n0m4official)**
 
@@ -126,6 +128,14 @@ Key modules & functions:
   Start, pause, and end menus with visually pleasing, interactive prompts.
 - **Commented and maintainable:**  
   Source code is full of helpful, honest comments for easier learning and extension.
+
+---
+
+## 🐞 Known Bugs
+
+- `loadColors` uses the literal condition `1 < 7` in its loop, so the index climbs indefinitely if `colors.cfg` has more than seven lines, causing out-of-bounds writes to `COLORS`.
+- `Highscores.cpp` relies on `std::numeric_limits` without including `<limits>`, which breaks standalone builds of that translation unit.
+- The game accepts 10-character player names on game-over entry, but `loadHighscores` truncates every stored name to three characters when reloading from disk.
 
 ---
 
