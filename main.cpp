@@ -16,6 +16,17 @@
 
 using namespace std;
 
+/*
+NOTE:
+I made this project originally thinking that it would be an easy single script thing.
+But now if I move anything else in this file to separate ones, everything stops working.
+I am so sorry for the monolith of code in this one file.
+I just hope you all enjoy this version I made as I learn how to code in C++ :)
+*/
+
+// If you’re looking for clean code, you’re in the wrong place.
+// This is Tetris, not a code beauty contest.
+
 // --- Constants ---
 // Standard Tetris board size of 10x20
 const int WIDTH = 10;   ///< Width of the Tetris board
@@ -34,6 +45,7 @@ string COLORS[7] = {
 };
 
 // Wall kick offsets for pieces J, L, T, S, Z (O doesn't need wall kicks)
+// If you understand this on the first try, you deserve a medal.
 const vector<pair<int, int>> JLTSZ_WALL_KICKS[4] = {
     {{0,0},{-1,0},{-1,1},{0,-2},{-1,-2}},  // 0->R
     {{0,0},{1,0},{1,-1},{0,2},{1,2}},      // R->2
@@ -42,6 +54,7 @@ const vector<pair<int, int>> JLTSZ_WALL_KICKS[4] = {
 };
 
 // Wall kick offsets for I piece
+// The I piece: because every game needs a troublemaker.
 const vector<pair<int, int>> I_WALL_KICKS[4] = {
     {{0,0},{-2,0},{1,0},{-2,-1},{1,2}},  // 0->R
     {{0,0},{-1,0},{2,0},{-1,2},{2,-1}},  // R->2
@@ -50,6 +63,7 @@ const vector<pair<int, int>> I_WALL_KICKS[4] = {
 };
 
 // Load custom colors from config file
+// If this fails, you get default colors. Deal with it.
 void loadColors() {
     ifstream file("colors.cfg");
     if (!file.is_open()) return; // First run, file doesn't exist
@@ -64,6 +78,7 @@ void loadColors() {
 }
 
 // Save custom colors to config file
+// Because everyone deserves a little customization.
 void saveColors() {
     ofstream file("colors.cfg");
     for (int i = 0; i < 7; i++) {
@@ -73,6 +88,7 @@ void saveColors() {
 }
 
 // Interactive color customization
+// Warning: May cause indecision and existential crisis.
 void customizeColors() {
     string names[7] = { "Cyan", "Yellow", "Magenta", "Green", "Blue", "Red", "Bright Red" };
     string codes[7] = { "\033[36m","\033[33m","\033[35m","\033[32m","\033[34m","\033[31m","\033[91m" };
@@ -90,6 +106,7 @@ void customizeColors() {
 }
 
 // --- Menus ---
+// If you’re still reading, you must really love menus.
 
 // Display start menu
 // --- Start Menu with Highscores ---
@@ -151,6 +168,7 @@ void showStartMenu() {
 }
 
 // Display exit menu (when user quits mid-game)
+// If you quit, I won’t judge. Much.
 void showGameExitedMenu(int score, int lines, int level) {
     system("cls");
     resetCursor();
@@ -199,6 +217,7 @@ bool showGameOverMenu(int score, int lines, int level) {
     resetCursor();
 
     // Ask player for name
+    // If you enter "AAA", you’re officially a retro gamer.
     std::string playerName;
     printCentered("GAME OVER", 5);
     printCentered("Final Score: " + intToString(score), 7);
@@ -238,8 +257,8 @@ bool showGameOverMenu(int score, int lines, int level) {
 }
 
 // --- Tetromino Logic ---
-
 // Standard Tetris pieces (7 pieces, 4x4 matrices)
+// Why did I have to choose to do binary literals?
 vector<vector<vector<int>>> TETROMINOES = {
     {   // I
         {0,0,0,0},
@@ -287,6 +306,7 @@ vector<vector<vector<int>>> TETROMINOES = {
 
 
 // Rotate a piece 90 degrees clockwise
+// If you can rotate yourself this easily, you’re probably a gymnast.
 vector<vector<int>> rotateCW(const vector<vector<int>>& shape) {
     int n = (int)shape.size();
     vector<vector<int>> r(n, vector<int>(n, 0));
@@ -304,9 +324,11 @@ struct Piece {
     int x, y;                   ///< Position on board
     int id;                     ///< Piece type/color
     int rotation;
+    // If you change this, the Tetris gods will be angry.
 };
 
 // Spawn a new piece at the top center
+// Like a fresh start, but with more anxiety.
 Piece spawnPiece(int id) {
     return Piece{
         TETROMINOES[id], WIDTH / 2 - 2, 0, id
@@ -314,6 +336,7 @@ Piece spawnPiece(int id) {
 }
 
 // Calculate ghost piece Y position
+// Ghosts: because every game needs a haunting.
 int getGhostY(const Board& board, const Piece& current) {
     int y = current.y;
     while (board.isValidPosition(current.shape, current.x, y + 1)) {
@@ -323,6 +346,7 @@ int getGhostY(const Board& board, const Piece& current) {
 }
 
 // Calculate hard drop distance
+// If only life had a hard drop button.
 int dropDistance(const Board& board, const Piece& piece) {
     int dist = 0;
     while (board.isValidPosition(piece.shape, piece.x, piece.y + dist + 1)) {
@@ -331,6 +355,12 @@ int dropDistance(const Board& board, const Piece& piece) {
     return dist;
 }
 
+/*
+Disocvered a bug where sometimes pieces teleport when specific conditions are met.
+Unsure of cause but assumed to be something in tryRotateSRS function.
+Also replicating it is extremely difficult.
+*/
+// If you fix this bug, you get a free cookie.
 bool tryRotateSRS(Piece& piece, const Board& board) {
     int prevRot = piece.rotation;
     int nextRot = (piece.rotation + 1) % 4;
@@ -363,8 +393,8 @@ bool tryRotateSRS(Piece& piece, const Board& board) {
 
 
 // --- Rendering Functions ---
-
 // Draw board, current piece, and ghost piece
+// If you see weird colors, it’s not a bug, it’s a feature.
 void printBoard(const Board& board, const Piece& current, int score, int lines, int level) {
     int consoleWidth = getConsoleWidth();
     int boardWidth = WIDTH * 2 + 2;
@@ -406,7 +436,8 @@ void printBoard(const Board& board, const Piece& current, int score, int lines, 
 const int QUEUE_SIZE = 3;
 std::queue<Piece> nextQueue; // global queue
 
-// Render next queue (takes a copy)
+// This thing took me WAAAAAAAAAAY too long to get working.
+// If you break it, you fix it.
 void printNextQueue(const std::queue<Piece>& q) { // pass by const reference
     std::queue<Piece> copy = q; // local copy
 
@@ -448,6 +479,7 @@ Piece hold{ {}, 0, 0, -1 }; // initially empty
 bool holdUsed = false;      // can only hold once per piece
 
 // Pause menu overlay
+// If you pause, remember to stretch and hydrate.
 void showPauseMenu(const Board& board, const Piece& current, int score, int lines, int level) {
     // Redraw board in dim mode
     int consoleWidth = getConsoleWidth();
@@ -495,6 +527,8 @@ void showPauseMenu(const Board& board, const Piece& current, int score, int line
     printCentered(resumeText, y + 2);
 }
 
+// I have tried several times to stop this from being redrawn after every update, still cannot figure it out as of 03-11-2025.
+// If you solve this, you get a gold star.
 // Draw held piece
 void printHoldPiece(const Piece& hold) {
     int consoleWidth = getConsoleWidth();
@@ -527,6 +561,7 @@ void printHoldPiece(const Piece& hold) {
 }
 
 // --- Main Game Loop ---
+// If you make it through this loop, you deserve a break.
 int main() {
     srand((unsigned)time(nullptr));
     loadColors();
@@ -559,6 +594,7 @@ int main() {
 
         while (running) {
             // --- Input Handling ---
+            // If you lose, just blame the controls.
             if (_kbhit()) {
                 char cmd = _getch();
                 if (!paused) {
@@ -595,7 +631,6 @@ int main() {
                         dirty = true;
                         lastFall = clock();
                     }
-
                     if (cmd == 'c' || cmd == 'C') { // HOLD PIECE
                         if (!holdUsed) {
                             if (hold.id == -1) { // first hold
@@ -625,6 +660,7 @@ int main() {
             }
 
             // --- Automatic piece fall ---
+            // Gravity: not just for apples.
             if (!paused) {
                 clock_t now = clock();
                 if ((now - lastFall) * 1000 / CLOCKS_PER_SEC >= fallInterval) {
@@ -664,6 +700,7 @@ int main() {
             }
 
             // --- Rendering ---
+            // If you see flickering, just squint harder.
             if (dirty && !paused) {
                 resetCursor();
                 printBoard(board, current, score, totalLines, level);
