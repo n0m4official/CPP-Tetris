@@ -34,7 +34,7 @@ I just hope you all enjoy this version I made as I learn how to code in C++ :)
 
 
 // Themes
-enum class Theme { Default, Halloween, Christmas, NewYear, Valentines, Birthday };
+enum class Theme { Default, Halloween, Christmas, NewYear, Valentines, Birthday, Rememberance };
 
 Theme getSeasonalTheme() {
     time_t t = time(nullptr);
@@ -48,6 +48,7 @@ Theme getSeasonalTheme() {
     if (month == 1 && day >= 7) return Theme::NewYear;
     if (month == 2 && day >= 10 && day <= 20) return Theme::Valentines;
     if (month == 11 && day == 12)return Theme::Birthday;
+	if (month == 11 && day == 11)return Theme::Rememberance;
     return Theme::Default;
 }
 
@@ -175,6 +176,11 @@ void showStartMenu() {
         bannerColor = "\033[1;33m"; // gold
         subtitle = "Happy birthday to the dev!";
         break;
+    case Theme::Rememberance:
+		bannerColor = "\033[1;30m"; // gray
+		title = "🕯️ TETRIS: In Remembrance 🕯️";
+		subtitle = "Lest we forget.";
+		break;
     default:
         break;
     }
