@@ -423,7 +423,7 @@ struct Piece {
 // id: 0-6 for the 7 tetrominoes
 Piece spawnPiece(int id) {
     return Piece{
-        TETROMINOES[id], WIDTH / 2 - 2, 0, id
+        TETROMINOES[id], WIDTH / 2 - 2, 0, id, 0 // rotation = 0
     };
 }
 
@@ -461,16 +461,43 @@ bool tryRotateSRS(Piece& piece, const Board& board) {
 
     auto rotated = rotateCW(piece.shape);
 
-    const vector<pair<int, int>>* kicks;
-    if (piece.id == 0) // I-piece
-        kicks = I_WALL_KICKS;
-    else if (piece.id == 1) // O-piece
-        return true; // O-piece doesn't need kicks, just rotate in place
-    else
-        kicks = JLTSZ_WALL_KICKS;
+    // SRS wall kick data: [from][to][kick tests]
+    // For SRS, the wall kick table is indexed by (from, to)
+    // 0: spawn, 1: right, 2: reverse, 3: left
+    // For clockwise rotation: (from, to) = (prevRot, nextRot)
+    // For counterclockwise, you would use (prevRot, (prevRot + 3) % 4)
 
-    // Try all wall kick offsets
-    for (auto [dx, dy] : kicks[prevRot]) {
+    // Wall kick data for JLTSZ
+    static const vector<pair<int, int>> JLTSZ_KICKS[4][4] = {
+        // 0 -> R, R -> 2, 2 -> L, L -> 0
+        { JLTSZ_WALL_KICKS[0], JLTSZ_WALL_KICKS[1], JLTSZ_WALL_KICKS[2], JLTSZ_WALL_KICKS[3] },
+        { JLTSZ_WALL_KICKS[3], JLTSZ_WALL_KICKS[0], JLTSZ_WALL_KICKS[1], JLTSZ_WALL_KICKS[2] },
+        { JLTSZ_WALL_KICKS[2], JLTSZ_WALL_KICKS[3], JLTSZ_WALL_KICKS[0], JLTSZ_WALL_KICKS[1] },
+        { JLTSZ_WALL_KICKS[1], JLTSZ_WALL_KICKS[2], JLTSZ_WALL_KICKS[3], JLTSZ_WALL_KICKS[0] }
+    };
+
+    // Wall kick data for I
+    static const vector<pair<int, int>> I_KICKS[4][4] = {
+        { I_WALL_KICKS[0], I_WALL_KICKS[1], I_WALL_KICKS[2], I_WALL_KICKS[3] },
+        { I_WALL_KICKS[3], I_WALL_KICKS[0], I_WALL_KICKS[1], I_WALL_KICKS[2] },
+        { I_WALL_KICKS[2], I_WALL_KICKS[3], I_WALL_KICKS[0], I_WALL_KICKS[1] },
+        { I_WALL_KICKS[1], I_WALL_KICKS[2], I_WALL_KICKS[3], I_WALL_KICKS[0] }
+    };
+
+    if (piece.id == 1) {
+        // O-piece: rotate in place, no wall kicks, rotation state does not change
+        piece.shape = rotated;
+        return true;
+    }
+
+    const vector<pair<int, int>>* kicks = nullptr;
+    if (piece.id == 0) { // I-piece
+        kicks = &I_KICKS[prevRot][nextRot];
+    } else {
+        kicks = &JLTSZ_KICKS[prevRot][nextRot];
+    }
+
+    for (const auto& [dx, dy] : *kicks) {
         int newX = piece.x + dx;
         int newY = piece.y + dy;
         if (board.isValidPosition(rotated, newX, newY)) {
