@@ -34,7 +34,8 @@ I just hope you all enjoy this version I made as I learn how to code in C++ :)
 
 
 // Themes
-// Getting these stupid themes to work actually made me go insane
+// Getting these stupid themes to work actually made me go insane.
+// I changed NOTHING from the original version and now it works... how?????????
 enum class Theme { Default, Halloween, Christmas, NewYear, Valentines, Birthday, Remembrance };
 
 Theme getSeasonalTheme() {
