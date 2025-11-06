@@ -16,7 +16,7 @@
 #include "Board.h"
 #include "Highscores.h"
 #include "ConsoleUtils.h"
-#include "_SecretProtocol.h"
+#include "_SecretProtocol_real.h"
 
 
 using namespace std;
@@ -34,6 +34,7 @@ I just hope you all enjoy this version I made as I learn how to code in C++ :)
 
 
 // Themes
+// Getting these stupid themes to work actually made me go insane
 enum class Theme { Default, Halloween, Christmas, NewYear, Valentines, Birthday, Remembrance };
 
 Theme getSeasonalTheme() {
@@ -43,12 +44,16 @@ Theme getSeasonalTheme() {
     int month = now->tm_mon + 1;
     int day = now->tm_mday;
 
-    if (month == 10 && day >= 20) return Theme::Halloween;
+    if (month == 10 && day <= 25 && day >= 20) return Theme::Halloween;
     if (month == 12 && day >= 1) return Theme::Christmas;
     if (month == 1 && day >= 7) return Theme::NewYear;
     if (month == 2 && day >= 10 && day <= 20) return Theme::Valentines;
+
+    // 
     if (month == 11 && day == 12)return Theme::Birthday;
-	if (month == 11 && day == 11)return Theme::Remembrance;
+
+    // This was the only was to make this theme range to work
+	if (month == 11 && day >= 11)return Theme::Remembrance;
     return Theme::Default;
 }
 
@@ -157,20 +162,20 @@ void showStartMenu() {
     switch (theme) {
     case Theme::Halloween:
         bannerColor = "\033[38;5;208m"; // orange
-        title = "🎃 TETRIS: Spooky Blocks 🎃";
+        title = "TETRIS: Spooky Blocks";
         break;
     case Theme::Christmas:
         bannerColor = "\033[1;32m"; // green
-        title = "🎄 TETRIS: Holiday Edition 🎄";
+        title = "TETRIS: Holiday Edition";
         subtitle = "Ho-Ho-Hold those pieces!";
         break;
     case Theme::NewYear:
         bannerColor = "\033[1;33m"; // gold
-        title = "✨ TETRIS: New Year Special ✨";
+        title = "TETRIS: New Year Special";
         break;
     case Theme::Valentines:
         bannerColor = "\033[1;35m"; // magenta
-        title = "💖 TETRIS: Love Blocks 💖";
+        title = "TETRIS: Love Blocks";
         break;
     case Theme::Birthday:
         bannerColor = "\033[1;33m"; // gold
@@ -178,7 +183,7 @@ void showStartMenu() {
         break;
     case Theme::Remembrance:
 		bannerColor = "\033[1;30m"; // gray
-		title = "🕯️ TETRIS: In Remembrance 🕯️";
+		title = "TETRIS: In Remembrance";
 		subtitle = "Lest we forget.";
 		break;
     default:
@@ -188,7 +193,7 @@ void showStartMenu() {
     Secret::ApplySeasonalBanner(bannerColor, title, subtitle);
 
     printCentered(bannerColor + "====================================" + "\033[0m", 5);
-    printCentered(bannerColor + title + "\033[0m", 6);
+    printCentered(bannerColor + (title.empty() ? std::string("TETRIS v2.0.5") : title) + "\033[0m", 6);
     printCentered(bannerColor + (subtitle.empty() ? std::string("By n0m4official") : subtitle) + "\033[0m", 7);
     printCentered(bannerColor + "====================================" + "\033[0m", 8);
 
