@@ -157,7 +157,7 @@ void showStartMenu() {
     Theme theme = getSeasonalTheme();
 
     string bannerColor = "\033[1;36m"; // default cyan
-    string title = "TETRIS v2.0.0";
+    string title = "TETRIS v2.0.5";
     string subtitle = "By n0m4official";
 
     switch (theme) {
