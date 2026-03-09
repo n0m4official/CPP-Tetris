@@ -18,8 +18,16 @@
 #include "ConsoleUtils.h"
 #include "_SecretProtocol_real.h"
 
-
 using namespace std;
+
+// okay, how in the hell did I forget how to program in C++?!?!
+// I stepped away for like 2 months because of classes! WTF?!?!
+
+/* 
+When I worte this program, only god and myself knew how it worked.
+Now, only god knows.
+I have no idea. I just hope it does what I think it does.
+*/
 
 /*
 NOTE:
@@ -32,30 +40,29 @@ I just hope you all enjoy this version I made as I learn how to code in C++ :)
 // If you’re looking for clean code, you’re in the wrong place.
 // This is Tetris, not a code beauty contest.
 
-
 // Themes
 // Getting these stupid themes to work actually made me go insane.
 // I changed NOTHING from the original version and now it works... how?????????
 enum class Theme { Default, Halloween, Christmas, NewYear, Valentines, Birthday, Remembrance };
 
-Theme getSeasonalTheme() {
-    time_t t = time(nullptr);
-    tm* now = localtime(&t);
+Theme getSeasonalTheme() { 
+	time_t t = time(nullptr);   // get current time
+	tm* now = localtime(&t);    // convert to local time structure
 
-    int month = now->tm_mon + 1;
-    int day = now->tm_mday;
+	int month = now->tm_mon + 1;    // 1-12
+	int day = now->tm_mday;         // 1-31
 
-    if (month == 10 && day <= 25 && day >= 20) return Theme::Halloween;
-    if (month == 12 && day >= 1) return Theme::Christmas;
-    if (month == 1 && day >= 7) return Theme::NewYear;
-    if (month == 2 && day >= 10 && day <= 20) return Theme::Valentines;
+    if (month == 10 && day <= 25 && day >= 20) return Theme::Halloween; // Oct 20 - end of Oct 25
+    if (month == 12 && day >= 1) return Theme::Christmas;               // Dec 1 - end of Dec 31
+    if (month == 1 && day <= 7) return Theme::NewYear;                  // Jan 1 - end of Jan 7
+    if (month == 2 && day >= 10 && day <= 20) return Theme::Valentines; // Feb 10 - end of Feb 20
 
     // 
-    if (month == 11 && day == 12)return Theme::Birthday;
+    if (month == 11 && day == 12)return Theme::Birthday;                // Nov 12
 
     // This was the only was to make this theme range to work
-	if (month == 11 && day >= 11)return Theme::Remembrance;
-    return Theme::Default;
+	if (month == 11 && day >= 11)return Theme::Remembrance;             // Nov 1 - end of Nov 11
+	return Theme::Default;                                              // No special theme
 }
 
 // --- Constants ---
@@ -76,11 +83,49 @@ string COLORS[7] = {
 };
 
 auto colorFor = [&](int id)->const char* {
-    if (Secret::UseRetroMonochrome()) return "\033[1;37m";
-    if (Secret::UseRedTint()) return "\033[31m";
-    if (Secret::UseGrayNight()) return "\033[90m";
-    if (Secret::UseRainbowPieces()) { static const char* R[] = { "\033[31m","\033[33m","\033[32m","\033[36m","\033[34m","\033[35m","\033[91m" }; return R[(id + rand()) % 7]; }
-    if (Secret::UseColorChaos()) { static const char* R[] = { "\033[31m","\033[33m","\033[32m","\033[36m","\033[34m","\033[35m","\033[91m" }; return R[rand() % 7]; }
+    if (Secret::UseRetroMonochrome()) 
+    {
+		return "\033[1;37m"; // Bright White
+    }
+
+    if (Secret::UseRedTint()) 
+    {
+		return "\033[31m"; // Red
+    }
+
+    if (Secret::UseGrayNight()) 
+    {
+		return "\033[90m"; // Dark gray
+    }
+
+    if (Secret::UseRainbowPieces()) 
+    { 
+        static const char* R[] = { 
+			"\033[31m", // Red
+			"\033[33m", // Yellow
+			"\033[32m", // Green
+			"\033[36m", // Cyan
+			"\033[34m", // Blue
+			"\033[35m", // Magenta
+			"\033[91m"  // Bright Red
+        }; 
+		return R[(id + rand()) % 7]; // randomized per piece
+    }
+
+    if (Secret::UseColorChaos())
+    { 
+        static const char* R[] = { 
+			"\033[31m", // Red
+			"\033[33m", // Yellow
+			"\033[32m", // Green
+			"\033[36m", // Cyan
+			"\033[34m", // Blue
+			"\033[35m", // Magenta
+			"\033[91m"  // Bright Red
+        }; 
+		return R[rand() % 7]; // completely random color each time
+    }
+
     return nullptr;
 };
 
@@ -108,13 +153,13 @@ void loadColors() {
     ifstream file("colors.cfg");
     if (!file.is_open()) return; // First run, file doesn't exist
 
-    string line;
-    int i = 0;
+	string line; // read line by line
+	int i = 0; // color index
     while (getline(file, line) && 1 < 7) {
-        COLORS[i] = line;
-        i++;
+		COLORS[i] = line; // load color code
+		i++; // next color
     }
-    file.close();
+	file.close(); // close file
 }
 
 // Save custom colors to config file
@@ -122,27 +167,27 @@ void loadColors() {
 void saveColors() {
     ofstream file("colors.cfg");
     for (int i = 0; i < 7; i++) {
-        file << COLORS[i] << "\n";
+        file << COLORS[i] << "\n"; // save color code
     }
-    file.close();
+    file.close(); // close file
 }
 
 // Interactive color customization
 // Warning: May cause indecision and existential crisis.
 void customizeColors() {
-    string names[7] = { "Cyan", "Yellow", "Magenta", "Green", "Blue", "Red", "Bright Red" };
-    string codes[7] = { "\033[36m","\033[33m","\033[35m","\033[32m","\033[34m","\033[31m","\033[91m" };
+	string names[7] = { "Cyan", "Yellow", "Magenta", "Green", "Blue", "Red", "Bright Red" }; // color names
+	string codes[7] = { "\033[36m","\033[33m","\033[35m","\033[32m","\033[34m","\033[31m","\033[91m" }; // color codes
 
     for (int i = 0; i < 7; i++) {
-        cout << "Choose color for piece " << i << " (" << names[i] << "):\n";
+		cout << "Choose color for piece " << i << " (" << names[i] << "):\n"; // prompt
         for (int j = 0; j < 7; j++) {
-            cout << j << ": " << codes[j] << "[]" << RESET << " " << names[j] << "\n";
+			cout << j << ": " << codes[j] << "[]" << RESET << " " << names[j] << "\n"; // show options
         }
-        int choice = 0;
-        cin >> choice;
-        if (choice >= 0 && choice < 7) COLORS[i] = codes[choice];
+		int choice = 0; // user choice
+		cin >> choice; // get choice
+		if (choice >= 0 && choice < 7) COLORS[i] = codes[choice]; // set color
     }
-    saveColors();
+	saveColors(); // save to file
 }
 
 // --- Menus ---
@@ -222,36 +267,36 @@ void showStartMenu() {
 
     // --- Prompt to start ---
     string prompt = "\033[1;32mPress ENTER to start game...\033[0m";
-    int promptY = y + 1;
+	int promptY = y + 1; // position below highscores
     while (true) {
         if (_kbhit()) {
-            char c = _getch();
-            Secret::OnTitleKey(c);
+			char c = _getch(); // get key press
+			Secret::OnTitleKey(c); // secret protocol hook
             if (c == '\r') break; // start game
             if (c == 'c' || c == 'C') {
-                customizeColors();
-                system("cls");
+				customizeColors(); // customize colors
+				system("cls"); // clear screen
                 showStartMenu(); // restart menu after customizing
                 return;
             }
-            if (c == 'q' || c == 'Q') exit(0);
+			if (c == 'q' || c == 'Q') exit(0); // quit game
         }
-        Secret::StartMenuOverpaintTick();
-        printCentered(prompt, promptY);
-        Sleep(500);
+		Secret::StartMenuOverpaintTick(); // secret protocol hook
+		printCentered(prompt, promptY); // show prompt
+		Sleep(500); // wait
         printCentered(string(visibleLength(prompt), ' '), promptY); // blinking effect
-        Sleep(500);
+		Sleep(500); // wait
     }
 
-    system("cls");
-    resetCursor();
+	system("cls"); // clear screen
+	resetCursor(); // reset cursor
 }
 
 // Display exit menu (when user quits mid-game)
-// If you quit, I won’t judge. Much.
+// If you quit, I won’t judge. Much. (Unless you do it on a high score run, then we have a problem.)
 void showGameExitedMenu(int score, int lines, int level) {
-    system("cls");
-    resetCursor();
+	system("cls"); // clear screen
+	resetCursor(); // reset cursor
 
     vector<string> linesToPrint = {
         "GAME EXITED",
@@ -261,11 +306,11 @@ void showGameExitedMenu(int score, int lines, int level) {
         "Press ENTER to return to start menu..."
     };
 
-    size_t maxLen = 0;
+	size_t maxLen = 0; // calculate max line length
     for (const auto& l : linesToPrint) {
-        maxLen = std::max(maxLen, static_cast<size_t>(visibleLength(l)));
+		maxLen = std::max(maxLen, static_cast<size_t>(visibleLength(l))); // visible length
     }
-    string border(maxLen + 4, '=');
+	string border(maxLen + 4, '='); // create border
 
     printCentered("\033[1;31m" + border + "\033[0m", 5);
     printCentered("\033[1;31m  " + linesToPrint[0] + "  \033[0m", 6);
@@ -279,14 +324,14 @@ void showGameExitedMenu(int score, int lines, int level) {
 
     while (true) {
         if (_kbhit() && _getch() == '\r') {
-            system("cls");
-            showStartMenu();
-            return;
+			system("cls"); // clear screen
+			showStartMenu(); // return to start menu
+			return; // exit function
         }
-        Sleep(10);
+		Sleep(10); // small delay
     }
-    system("cls");
-    resetCursor();
+	system("cls"); // clear screen
+	resetCursor(); // reset cursor
 }
 
 // Display game over menu with restart option
@@ -298,19 +343,19 @@ void showGameExitedMenu(int score, int lines, int level) {
 // Because everyone loves a good leaderboard.
 // I spent way too much time on this part, why am I like this...
 bool showGameOverMenu(int score, int lines, int level) {
-    system("cls");
-    resetCursor();
+    system("cls"); // clear screen
+	resetCursor(); // reset cursor
 
     // Ask player for name
     // If you enter "AAA", you’re officially a retro gamer.
-    std::string playerName;
+	std::string playerName; // player name
     printCentered("GAME OVER", 5);
     printCentered("Final Score: " + intToString(score), 7);
     printCentered("Enter your name (max 10 chars): ", 9);
 
-    std::cin >> playerName;
+	std::cin >> playerName; // get name input
     if (playerName.length() > 10)
-        playerName = playerName.substr(0, 10);
+		playerName = playerName.substr(0, 10); // truncate to 10 chars
 
     double multiplier = 1.0;
     bool hideScoreText = false;
@@ -350,6 +395,7 @@ bool showGameOverMenu(int score, int lines, int level) {
 // --- Tetromino Logic ---
 // Standard Tetris pieces (7 pieces, 4x4 matrices)
 // Why did I have to choose to do binary literals?
+// Looking at this 3 months later, I still don't understand why I did this, but here we are. At least it looks cool, right?
 vector<vector<vector<int>>> TETROMINOES = {
     {   // I
         {0,0,0,0},
@@ -398,6 +444,9 @@ vector<vector<vector<int>>> TETROMINOES = {
 
 // Rotate a piece 90 degrees clockwise
 // If you can rotate yourself this easily, you’re probably a gymnast.
+// Returns the rotated shape
+// This is a standard matrix rotation algorithm for 4x4 matrices.
+// If you understand how this works, you understand how to rotate any 2D array in C++. It’s a fundamental skill for game development and graphics programming.
 vector<vector<int>> rotateCW(const vector<vector<int>>& shape) {
     int n = (int)shape.size();
     vector<vector<int>> r(n, vector<int>(n, 0));
@@ -416,6 +465,8 @@ struct Piece {
     int id;                     ///< Piece type/color
     int rotation;
     // If you change this, Tetris gods get angy.
+	// I'm serious - don't change the order of these fields without checking every single function that uses them, 
+    // or you might break everything and I won't be able to fix it because I forgot how this works.
 };
 
 // Spawn a new piece at the top center
@@ -429,6 +480,7 @@ Piece spawnPiece(int id) {
 
 // Calculate ghost piece Y position
 // Ghosts: because every game needs a haunting.
+// Returns the Y position where the piece would land if dropped
 int getGhostY(const Board& board, const Piece& current) {
     int y = current.y;
     while (board.isValidPosition(current.shape, current.x, y + 1)) {
@@ -440,6 +492,7 @@ int getGhostY(const Board& board, const Piece& current) {
 // Calculate hard drop distance
 // If only life had a hard drop button.
 // Returns how many rows the piece can drop
+// Seems simple, getting it to work made me want to commit self Alt-F4...
 int dropDistance(const Board& board, const Piece& piece) {
     int dist = 0;
     while (board.isValidPosition(piece.shape, piece.x, piece.y + dist + 1)) {
@@ -454,6 +507,8 @@ Unsure of cause but assumed to be something in tryRotateSRS function.
 Also replicating it is extremely difficult.
 Attempt to rotate piece with SRS wall kicks
 */
+// Above note still not resolved as of March 9, 2026, I have no idea how to fix it or what's causing it, so here we are.
+
 // Returns true if rotation succeeded, false otherwise
 bool tryRotateSRS(Piece& piece, const Board& board) {
     int prevRot = piece.rotation;
@@ -512,8 +567,8 @@ bool tryRotateSRS(Piece& piece, const Board& board) {
 }
 
 
-
 // --- Rendering Functions ---
+// When I wrote it, only GOD and myself understood what it did. Now, only GOD knows. I have no idea how this works anymore...
 // Draw board, current piece, and ghost piece
 // If you see weird colors, it’s not a bug, it’s a feature.
 // Enhanced printBoard with secret visual modes integrated
@@ -606,7 +661,8 @@ std::queue<Piece> nextQueue; // global queue
 
 // Draw next pieces from the queue
 // This thing took me WAAAAAAAAAAY too long to get working.
-// If you break it, you fix it.
+// If you're reading this, you owe me enough cans of monster to last a lifetime. (And if you break it, you owe me even more cans to fix it.)
+// If you break it, you fix it. (And good luck, because I have no idea how it works anymore.)
 void printNextQueue(const std::queue<Piece>& q) { // pass by const reference
     std::queue<Piece> copy = q; // local copy
 
@@ -648,7 +704,7 @@ Piece hold{ {}, 0, 0, -1 }; // initially empty
 bool holdUsed = false;      // can only hold once per piece
 
 // Pause menu overlay
-// If you pause, remember to stretch and hydrate.
+// If you pause, remember to stretch and hydrate. (Also go touch grass, seriously.)
 void showPauseMenu(const Board& board, const Piece& current, int score, int lines, int level) {
     // Redraw board in dim mode
 	int consoleWidth = getConsoleWidth(); // get console width
@@ -696,7 +752,7 @@ void showPauseMenu(const Board& board, const Piece& current, int score, int line
 	printCentered(resumeText, y + 2); // print resume/quit text
 }
 
-// I have tried several times to stop this from being redrawn after every update, still cannot figure it out as of 03-11-2025.
+// I have tried several times to stop this from being redrawn after every update, still cannot figure it out as of 09-03-2026.
 // If you solve this, I will be forever grateful.
 // Draw held piece
 void printHoldPiece(const Piece& hold) {
@@ -744,6 +800,7 @@ int main() {
     loadColors();
     Secret::Init();
 
+    // Do NOT ask me how long I spent making sure this thing worked.
     if (isRemembranceHour()) {
         system("cls");
         SetConsoleOutputCP(CP_UTF8);
@@ -837,6 +894,7 @@ int main() {
         Piece current = nextQueue.front(); nextQueue.pop();
         nextQueue.push(spawnPiece(rand() % 7));
 
+		// Honestly, not sure if this works consistently, but it’s worth a shot and nothing else is broken.
         Secret::OnSessionStart();
 
         Piece hold;
@@ -849,7 +907,7 @@ int main() {
 
         while (running) {
             // --- Input Handling ---
-            // If you lose, just blame the controls.
+			// If you lose, just blame the controls. (I'll still say skill issue, but you can pretend it's the controls if it makes you feel better.)
             if (_kbhit()) {
                 char cmd = _getch();
                 if (!paused) {
@@ -864,6 +922,7 @@ int main() {
                         Secret::OnHardDrop();
 
                         // Place piece immediately
+						// This for some reason had a bug where the piece would FALL through the floor after hard dropping, I still have no idea what caused it or how I fixed it.
                         board.placePiece(current.shape, current.x, current.y, current.id);
                         int cleared = board.clearLines();
                         totalLines += cleared;
@@ -962,12 +1021,20 @@ int main() {
             if (dirty && !paused) {
                 resetCursor();
                 printBoard(board, current, score, totalLines, level);
-                printNextQueue(nextQueue);
+                
+                // Flickering issue fix
+                static int lastQueueFront = -2;
+                if (!nextQueue.empty() && nextQueue.front().id != lastQueueFront) {
+                    printNextQueue(nextQueue);
+                    lastQueueFront = nextQueue.front().id;
+                }
+                
                 printHoldPiece(hold);
+
                 dirty = false;
             }
 
-            Sleep(16); // ~60 FPS
+            Sleep(16); // ~60 FPS (because fuck you and your RTX 5090)
         }
     }
 

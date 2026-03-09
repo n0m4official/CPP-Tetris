@@ -10,7 +10,7 @@
 #include "ConsoleUtils.h"
 
 // If you can read this, you’re officially in the highscore zone.
-// May your score be ever higher than your caffeine intake.
+// May your score be ever higher than my caffeine intake.
 
 // --- Highscore entry struct ---
 struct HighscoreEntry {
