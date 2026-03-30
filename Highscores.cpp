@@ -1,7 +1,7 @@
 #include "Highscores.h"
 
 // Welcome to the land of high scores.
-// If you’re not on this list, try again. Or bribe the developer.
+// If youâ€™re not on this list, try again. Or bribe the developer.
 
 // --- Load highscores from file ---
 std::vector<HighscoreEntry> loadHighscores(const std::string& filename) {
@@ -23,11 +23,12 @@ std::vector<HighscoreEntry> loadHighscores(const std::string& filename) {
 // --- Save highscores to file ---
 void saveHighscores(const std::vector<HighscoreEntry>& highscores, const std::string& filename) {
     std::ofstream file(filename);
-    if (!file.is_open()) return; // If this fails, just tell everyone you’re #1.
+    if (!file.is_open()) return; // If this fails, just tell everyone youâ€™re #1.
 
     for (const auto& entry : highscores) {
         file << entry.name << " " << entry.score << "\n";
-        // If you’re reading this file, congrats on hacking the leaderboard.
+        // If youâ€™re reading this file, congrats on hacking the leaderboard.
+        // Also fuck you for hacking a console based tetris clone.
     }
 }
 
@@ -49,7 +50,7 @@ void showHighscores(const std::vector<HighscoreEntry>& highscores, const std::st
     system("cls");
     resetCursor();
 
-    // If you’re not on this list, you’re not trying hard enough.
+    // If youâ€™re not on this list, youâ€™re not trying hard enough.
     std::vector<std::string> lines;
     lines.push_back("=== HIGHSCORES ===");
     lines.push_back("Rank | Name     | Score");
@@ -62,7 +63,7 @@ void showHighscores(const std::vector<HighscoreEntry>& highscores, const std::st
             << " | " << entry.score;
 
         if (!latestName.empty() && entry.name == latestName) {
-            lines.push_back("\033[1;32m" + line.str() + "\033[0m"); // highlight latest entry, because you’re special
+            lines.push_back("\033[1;32m" + line.str() + "\033[0m"); // highlight latest entry, because youâ€™re special
         }
         else {
             lines.push_back(line.str());
