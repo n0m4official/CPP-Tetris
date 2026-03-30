@@ -22,7 +22,7 @@ bool Board::isValidPosition(const vector<vector<int>>& shape, int x, int y) cons
 }
 
 // Piece placing logic
-// If you see pieces floating, it’s not a bug, it’s modern art.
+// If you see pieces floating, itâ€™s not a bug, itâ€™s modern art.
 void Board::placePiece(const vector<vector<int>>& shape, int x, int y, int id) {
     for (int i = 0; i < (int)shape.size(); ++i)
         for (int j = 0; j < (int)shape[0].size(); ++j)
@@ -30,7 +30,7 @@ void Board::placePiece(const vector<vector<int>>& shape, int x, int y, int id) {
 }
 
 // Handles line clearing
-// If you clear four lines at once, you’re officially a legend.
+// If you clear four lines at once, youâ€™re officially a legend.
 int Board::clearLines() {
     int cleared = 0;
     for (int row = 19; row >= 0; --row) {
@@ -45,7 +45,7 @@ int Board::clearLines() {
 }
 
 // Scores for number of cleared lines
-// If you get 0 points, you’re probably playing upside down.
+// If you get 0 points, may god help you since I am pretty sure that's impossible (granted it's windows).
 int Board::scoreForLines(int lines, int level) {
     switch (lines) {
     case 1: return 40 * (level + 1);
