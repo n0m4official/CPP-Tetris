@@ -13,11 +13,11 @@
 using std::string;
 using std::cout;
 
-// If you’re reading this, you’re probably trying to fix a bug.
+// If youâ€™re reading this, youâ€™re probably trying to fix a bug.
 // Good luck. May the console gods be with you.
 
 // --- Convert integer to string ---
-// Because std::to_string was too mainstream for me.
+// Because std::to_string was too mainstream for me. (It refused to work)
 inline string intToString(int n) {
     std::stringstream ss;
     ss << n;
